@@ -31,9 +31,6 @@ document.addEventListener('DOMContentLoaded', function() {
     let sendCurrency = currencies.find(c => c.code === 'USD');
     let receiveCurrency = currencies.find(c => c.code === 'MXN');
     let currentSelector = null; // 'send' or 'receive'
-    let currentStep = 1;
-    let selectedPaymentMethod = 'bank';
-    let rateCountdown = 30;
 
     // ===== Mobile Menu Toggle =====
     if (navToggle && navMenu) {
@@ -99,7 +96,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const receiveCode = document.getElementById('receiveCode');
     const exchangeRateDisplay = document.getElementById('exchangeRate');
     const swapBtn = document.getElementById('swapBtn');
-    const rateTimerDisplay = document.getElementById('rateTimer');
+    const exchangeBtn = document.getElementById('exchangeBtn');
+    const paymentMethod = document.getElementById('paymentMethod');
+    const paymentOptions = document.querySelectorAll('.payment-option');
 
     // Currency Modal elements
     const currencyModalOverlay = document.getElementById('currencyModalOverlay');
@@ -114,25 +113,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const modalSent = document.getElementById('modalSent');
     const modalReceived = document.getElementById('modalReceived');
 
-    // Step elements
-    const stepIndicators = document.querySelectorAll('.step-indicator');
-    const stepPanels = document.querySelectorAll('.step-panel');
-    const nextStepBtn = document.getElementById('nextStepBtn');
-    const backToStep1Btn = document.getElementById('backToStep1');
-    const nextToStep3Btn = document.getElementById('nextToStep3');
-    const backToStep2Btn = document.getElementById('backToStep2');
-    const confirmExchangeBtn = document.getElementById('confirmExchangeBtn');
-
-    // Summary elements
-    const summarySendAmount = document.getElementById('summarySendAmount');
-    const summaryReceiveAmount = document.getElementById('summaryReceiveAmount');
-    const summaryRate = document.getElementById('summaryRate');
-    const summaryMethod = document.getElementById('summaryMethod');
-    const summaryFee = document.getElementById('summaryFee');
-
-    // Payment cards
-    const paymentCards = document.querySelectorAll('.payment-card');
-
     // Calculate exchange
     function calculateExchange() {
         const sendAmount = parseFloat(sendAmountInput.value) || 0;
@@ -140,9 +120,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const receiveAmount = sendAmount * rate;
 
         receiveAmountInput.value = formatNumber(receiveAmount);
-        if (exchangeRateDisplay) {
-            exchangeRateDisplay.textContent = `1 ${sendCurrency.code} = ${formatNumber(rate)} ${receiveCurrency.code}`;
-        }
+        exchangeRateDisplay.textContent = `1 ${sendCurrency.code} = ${formatNumber(rate)} ${receiveCurrency.code}`;
 
         // Update P2P offers rates
         updateOffersRates(rate);
@@ -169,10 +147,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Update currency display
     function updateCurrencyDisplay() {
-        if (sendFlag) sendFlag.textContent = sendCurrency.flag;
-        if (sendCode) sendCode.textContent = sendCurrency.code;
-        if (receiveFlag) receiveFlag.textContent = receiveCurrency.flag;
-        if (receiveCode) receiveCode.textContent = receiveCurrency.code;
+        sendFlag.textContent = sendCurrency.flag;
+        sendCode.textContent = sendCurrency.code;
+        receiveFlag.textContent = receiveCurrency.flag;
+        receiveCode.textContent = receiveCurrency.code;
         calculateExchange();
     }
 
@@ -237,69 +215,13 @@ document.addEventListener('DOMContentLoaded', function() {
         updateCurrencyDisplay();
     }
 
-    // ===== Multi-Step Form Navigation =====
-    function goToStep(step) {
-        currentStep = step;
-
-        // Update step indicators
-        stepIndicators.forEach((indicator, index) => {
-            indicator.classList.remove('active', 'completed');
-            if (index + 1 < step) {
-                indicator.classList.add('completed');
-            } else if (index + 1 === step) {
-                indicator.classList.add('active');
-            }
-        });
-
-        // Update step panels
-        stepPanels.forEach((panel, index) => {
-            panel.classList.remove('active');
-            if (index + 1 === step) {
-                panel.classList.add('active');
-            }
-        });
-
-        // Update summary on step 3
-        if (step === 3) {
-            updateSummary();
-        }
-    }
-
-    function updateSummary() {
-        const sendAmount = parseFloat(sendAmountInput.value) || 0;
-        const rate = receiveCurrency.rate / sendCurrency.rate;
-        const receiveAmount = sendAmount * rate;
-
-        if (summarySendAmount) {
-            summarySendAmount.textContent = `${formatNumber(sendAmount)} ${sendCurrency.code}`;
-        }
-        if (summaryReceiveAmount) {
-            summaryReceiveAmount.textContent = `${formatNumber(receiveAmount)} ${receiveCurrency.code}`;
-        }
-        if (summaryRate) {
-            summaryRate.textContent = `1 ${sendCurrency.code} = ${formatNumber(rate)} ${receiveCurrency.code}`;
-        }
-        if (summaryMethod) {
-            const methodNames = {
-                'bank': 'Transferencia Bancaria',
-                'card': 'Tarjeta de Crédito/Débito',
-                'wallet': 'Wallet Digital',
-                'cash': 'Efectivo'
-            };
-            summaryMethod.textContent = methodNames[selectedPaymentMethod] || 'Transferencia Bancaria';
-        }
-        if (summaryFee) {
-            summaryFee.textContent = '$0.00 USD';
-        }
-    }
-
     // Open confirmation modal
     function openConfirmationModal() {
         const sendAmount = parseFloat(sendAmountInput.value) || 0;
         const receiveAmount = receiveAmountInput.value;
 
-        if (modalSent) modalSent.textContent = `${formatNumber(sendAmount)} ${sendCurrency.code}`;
-        if (modalReceived) modalReceived.textContent = `${receiveAmount} ${receiveCurrency.code}`;
+        modalSent.textContent = `${formatNumber(sendAmount)} ${sendCurrency.code}`;
+        modalReceived.textContent = `${receiveAmount} ${receiveCurrency.code}`;
 
         modalOverlay.classList.add('active');
     }
@@ -309,28 +231,11 @@ document.addEventListener('DOMContentLoaded', function() {
         modalOverlay.classList.remove('active');
     }
 
-    // ===== Rate Timer =====
-    function startRateTimer() {
-        setInterval(() => {
-            rateCountdown--;
-            if (rateCountdown <= 0) {
-                rateCountdown = 30;
-                simulateRateUpdate();
-            }
-            if (rateTimerDisplay) {
-                rateTimerDisplay.textContent = `${rateCountdown}s`;
-            }
-        }, 1000);
-    }
-
-    // ===== Event Listeners =====
-
-    // Exchange amount input
+    // Event Listeners for Exchange
     if (sendAmountInput) {
         sendAmountInput.addEventListener('input', calculateExchange);
     }
 
-    // Currency selection buttons
     if (sendCurrencyBtn) {
         sendCurrencyBtn.addEventListener('click', () => openCurrencyModal('send'));
     }
@@ -339,7 +244,6 @@ document.addEventListener('DOMContentLoaded', function() {
         receiveCurrencyBtn.addEventListener('click', () => openCurrencyModal('receive'));
     }
 
-    // Currency modal
     if (currencyModalClose) {
         currencyModalClose.addEventListener('click', closeCurrencyModal);
     }
@@ -358,54 +262,20 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Swap button
     if (swapBtn) {
         swapBtn.addEventListener('click', swapCurrencies);
     }
 
-    // Step navigation
-    if (nextStepBtn) {
-        nextStepBtn.addEventListener('click', () => goToStep(2));
+    if (exchangeBtn) {
+        exchangeBtn.addEventListener('click', openConfirmationModal);
     }
 
-    if (backToStep1Btn) {
-        backToStep1Btn.addEventListener('click', () => goToStep(1));
-    }
-
-    if (nextToStep3Btn) {
-        nextToStep3Btn.addEventListener('click', () => goToStep(3));
-    }
-
-    if (backToStep2Btn) {
-        backToStep2Btn.addEventListener('click', () => goToStep(2));
-    }
-
-    if (confirmExchangeBtn) {
-        confirmExchangeBtn.addEventListener('click', openConfirmationModal);
-    }
-
-    // Payment method selection
-    paymentCards.forEach(card => {
-        card.addEventListener('click', function() {
-            paymentCards.forEach(c => c.classList.remove('active'));
-            this.classList.add('active');
-            selectedPaymentMethod = this.dataset.method;
-        });
-    });
-
-    // Confirmation modal
     if (modalClose) {
         modalClose.addEventListener('click', closeConfirmationModal);
     }
 
     if (modalDownload) {
-        modalDownload.addEventListener('click', () => {
-            closeConfirmationModal();
-            // Reset to step 1
-            goToStep(1);
-            if (sendAmountInput) sendAmountInput.value = '1000';
-            calculateExchange();
-        });
+        modalDownload.addEventListener('click', closeConfirmationModal);
     }
 
     if (modalOverlay) {
@@ -416,44 +286,19 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Initialize exchange
-    if (sendAmountInput) {
-        calculateExchange();
-        startRateTimer();
-    }
-
-    // ===== FAQ Accordion =====
-    const faqItems = document.querySelectorAll('.faq-item');
-
-    faqItems.forEach(item => {
-        const question = item.querySelector('.faq-question');
-
-        question.addEventListener('click', () => {
-            const isActive = item.classList.contains('active');
-
-            // Close all other items
-            faqItems.forEach(otherItem => {
-                otherItem.classList.remove('active');
-            });
-
-            // Toggle current item
-            if (!isActive) {
-                item.classList.add('active');
-            }
+    // Payment method selection
+    paymentOptions.forEach(option => {
+        option.addEventListener('click', () => {
+            paymentOptions.forEach(opt => opt.classList.remove('active'));
+            option.classList.add('active');
+            paymentMethod.textContent = option.dataset.method;
         });
     });
 
-    // ===== Live Ticker Animation =====
-    function initTicker() {
-        const tickerWrapper = document.querySelector('.ticker-wrapper');
-        if (!tickerWrapper) return;
-
-        // Clone ticker items for seamless loop
-        const tickerItems = tickerWrapper.innerHTML;
-        tickerWrapper.innerHTML = tickerItems + tickerItems;
+    // Initialize exchange
+    if (sendAmountInput) {
+        calculateExchange();
     }
-
-    initTicker();
 
     // ===== Intersection Observer for animations =====
     const observerOptions = {
@@ -472,17 +317,27 @@ document.addEventListener('DOMContentLoaded', function() {
     }, observerOptions);
 
     // Elements to animate
-    const animateElements = document.querySelectorAll('.step-card, .benefit-item, .security-card, .country-badge, .exchange-card, .p2p-offers, .testimonial-card, .faq-item, .comparison-row');
+    const animateElements = document.querySelectorAll('.step-card, .benefit-item, .security-card, .country-badge, .exchange-card, .p2p-offers');
 
     animateElements.forEach((el, index) => {
         el.style.opacity = '0';
         el.style.transform = 'translateY(30px)';
-        el.style.transition = `opacity 0.6s ease ${index * 0.03}s, transform 0.6s ease ${index * 0.03}s`;
+        el.style.transition = `opacity 0.6s ease ${index * 0.05}s, transform 0.6s ease ${index * 0.05}s`;
         animateOnScroll.observe(el);
     });
 
+    // Add animation class
+    document.head.insertAdjacentHTML('beforeend', `
+        <style>
+            .animate-in {
+                opacity: 1 !important;
+                transform: translateY(0) !important;
+            }
+        </style>
+    `);
+
     // ===== Stats counter animation =====
-    const statsSection = document.querySelector('.hero-stats-section');
+    const statsSection = document.querySelector('.hero-stats');
     let statsAnimated = false;
 
     function animateStats() {
@@ -495,18 +350,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const hasPlus = text.includes('+');
             const hasM = text.includes('M');
             const hasK = text.includes('K');
-            const hasPercent = text.includes('%');
 
             let finalValue = parseFloat(text.replace(/[^0-9.]/g, ''));
             let suffix = '';
 
-            if (hasPercent) {
-                suffix = '%';
-            } else {
-                if (hasM) suffix = 'M';
-                if (hasK) suffix = 'K';
-                if (hasPlus) suffix += '+';
-            }
+            if (hasPlus) suffix += '+';
+            if (hasM) suffix = 'M' + suffix;
+            if (hasK) suffix = 'K' + suffix;
 
             let currentValue = 0;
             const increment = finalValue / 50;
@@ -523,8 +373,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 if (text.includes('$')) {
                     stat.textContent = '$' + Math.floor(currentValue) + 'M+';
-                } else if (hasPercent) {
-                    stat.textContent = currentValue.toFixed(1) + '%';
                 } else if (hasK) {
                     stat.textContent = Math.floor(currentValue) + 'K+';
                 } else {
@@ -536,18 +384,18 @@ document.addEventListener('DOMContentLoaded', function() {
         statsAnimated = true;
     }
 
-    // Trigger stats animation when hero stats section is visible
-    const heroStatsObserver = new IntersectionObserver(function(entries) {
+    // Trigger stats animation when hero is visible
+    const heroObserver = new IntersectionObserver(function(entries) {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
-                setTimeout(animateStats, 300);
-                heroStatsObserver.unobserve(entry.target);
+                setTimeout(animateStats, 500);
+                heroObserver.unobserve(entry.target);
             }
         });
     }, { threshold: 0.5 });
 
     if (statsSection) {
-        heroStatsObserver.observe(statsSection);
+        heroObserver.observe(statsSection);
     }
 
     // ===== Active nav link on scroll =====
@@ -573,6 +421,18 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     window.addEventListener('scroll', highlightNavOnScroll);
+
+    // Add active link styles
+    document.head.insertAdjacentHTML('beforeend', `
+        <style>
+            .nav-menu a.active {
+                color: var(--turquoise);
+            }
+            .nav-menu a.active::after {
+                width: 100%;
+            }
+        </style>
+    `);
 
     // ===== Parallax effect on hero image =====
     const heroImage = document.querySelector('.hero-image img');
@@ -615,6 +475,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // Update rates every 30 seconds
+    setInterval(simulateRateUpdate, 30000);
+
     // ===== Click on P2P offers =====
     const offerCards = document.querySelectorAll('.offer-card');
     offerCards.forEach(card => {
@@ -627,26 +490,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const offerRate = this.querySelector('.offer-rate').textContent;
             const rateValue = parseFloat(offerRate.replace(/[^0-9.]/g, ''));
 
-            if (rateValue && sendAmountInput) {
+            if (rateValue) {
                 const sendAmount = parseFloat(sendAmountInput.value) || 0;
                 const receiveAmount = sendAmount * rateValue;
                 receiveAmountInput.value = formatNumber(receiveAmount);
-                if (exchangeRateDisplay) {
-                    exchangeRateDisplay.textContent = `1 ${sendCurrency.code} = ${formatNumber(rateValue)} ${receiveCurrency.code}`;
-                }
+                exchangeRateDisplay.textContent = `1 ${sendCurrency.code} = ${formatNumber(rateValue)} ${receiveCurrency.code}`;
             }
         });
     });
-
-    // ===== Floating notifications animation =====
-    function animateNotifications() {
-        const notifications = document.querySelectorAll('.notification-bubble');
-        notifications.forEach((notification, index) => {
-            notification.style.animationDelay = `${index * 1.5}s`;
-        });
-    }
-
-    animateNotifications();
 
     console.log('Flow Money website loaded successfully!');
 });
