@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flow Money - Intercambio P2P de Divisas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Open+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/png" href="flowmoneylogo.png">
+</head>
+<body>
+    <!-- Header / Navegación -->
+    <header class="header">
+        <nav class="nav container">
+            <a href="#" class="logo">
+                <img src="flowmoneylogoblue.png" alt="Flow Money Logo">
+            </a>
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="#inicio">Inicio</a></li>
+                <li><a href="#plataforma">Plataforma</a></li>
+                <li><a href="#como-funciona">Cómo funciona</a></li>
+                <li><a href="#beneficios">Beneficios</a></li>
+                <li><a href="#seguridad">Seguridad</a></li>
+                <li><a href="#contacto">Contacto</a></li>
+            </ul>
+            <a href="#plataforma" class="btn btn-primary nav-cta">Comenzar ahora</a>
+            <button class="nav-toggle" id="navToggle" aria-label="Abrir menú">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero" id="inicio">
+        <div class="container hero-content">
+            <div class="hero-text">
+                <h1>Intercambia divisas <span class="highlight">fácil, rápido</span> y <span class="highlight">seguro</span></h1>
+                <p class="hero-subtitle">La plataforma P2P líder en Latinoamérica y España. Envía y recibe dinero sin complicaciones, con las mejores tasas del mercado.</p>
+                <div class="hero-cta">
+                    <a href="#descargar" class="btn btn-primary btn-lg">Descargar App</a>
+                    <a href="#como-funciona" class="btn btn-outline btn-lg">Ver cómo funciona</a>
+                </div>
+                <div class="hero-stats">
+                    <div class="stat">
+                        <span class="stat-number">500K+</span>
+                        <span class="stat-label">Usuarios activos</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">$50M+</span>
+                        <span class="stat-label">Transacciones mensuales</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">15+</span>
+                        <span class="stat-label">Países</span>
+                    </div>
+                </div>
+            </div>
+            <div class="hero-image">
+                <img src="FlowMoneyCelular.png" alt="Flow Money App en celular">
+            </div>
+        </div>
+        <div class="hero-wave">
+            <svg viewBox="0 0 1440 120" preserveAspectRatio="none">
+                <path d="M0,64L48,69.3C96,75,192,85,288,80C384,75,480,53,576,48C672,43,768,53,864,64C960,75,1056,85,1152,80C1248,75,1344,53,1392,42.7L1440,32L1440,120L1392,120C1344,120,1248,120,1152,120C1056,120,960,120,864,120C768,120,672,120,576,120C480,120,384,120,288,120C192,120,96,120,48,120L0,120Z" fill="#ffffff"></path>
+            </svg>
+        </div>
+    </section>
+
+    <!-- Plataforma de Intercambio -->
+    <section class="exchange-platform" id="plataforma">
+        <div class="container">
+            <div class="section-header">
+                <h2>Prueba nuestra <span class="highlight">plataforma</span></h2>
+                <p>Simula un intercambio y descubre lo fácil que es usar Flow Money.</p>
+            </div>
+            <div class="exchange-wrapper">
+                <div class="exchange-card">
+                    <div class="exchange-header">
+                        <img src="flowmoneylogoblue.png" alt="Flow Money" class="exchange-logo">
+                        <div class="exchange-status">
+                            <span class="status-dot"></span>
+                            <span>En línea</span>
+                        </div>
+                    </div>
+
+                    <div class="exchange-body">
+                        <!-- Envías -->
+                        <div class="exchange-field">
+                            <label>Envías</label>
+                            <div class="field-row">
+                                <input type="number" id="sendAmount" value="1000" min="1" placeholder="0.00">
+                                <div class="currency-select" id="sendCurrencyBtn">
+                                    <span class="currency-flag" id="sendFlag">🇺🇸</span>
+                                    <span class="currency-code" id="sendCode">USD</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Swap Button -->
+                        <button class="swap-btn" id="swapBtn" aria-label="Intercambiar monedas">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="17 1 21 5 17 9"></polyline>
+                                <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+                                <polyline points="7 23 3 19 7 15"></polyline>
+                                <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+                            </svg>
+                        </button>
+
+                        <!-- Recibes -->
+                        <div class="exchange-field">
+                            <label>Recibes</label>
+                            <div class="field-row">
+                                <input type="text" id="receiveAmount" value="0.00" readonly>
+                                <div class="currency-select" id="receiveCurrencyBtn">
+                                    <span class="currency-flag" id="receiveFlag">🇲🇽</span>
+                                    <span class="currency-code" id="receiveCode">MXN</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tasa de cambio -->
+                        <div class="exchange-rate">
+                            <div class="rate-info">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                                <span>Tasa de cambio:</span>
+                            </div>
+                            <span class="rate-value" id="exchangeRate">1 USD = 17.25 MXN</span>
+                        </div>
+
+                        <!-- Detalles -->
+                        <div class="exchange-details">
+                            <div class="detail-row">
+                                <span>Comisión Flow Money</span>
+                                <span class="detail-value free">Gratis</span>
+                            </div>
+                            <div class="detail-row">
+                                <span>Tiempo estimado</span>
+                                <span class="detail-value">~5 minutos</span>
+                            </div>
+                            <div class="detail-row">
+                                <span>Método de pago</span>
+                                <span class="detail-value" id="paymentMethod">Transferencia bancaria</span>
+                            </div>
+                        </div>
+
+                        <!-- Método de pago selector -->
+                        <div class="payment-methods">
+                            <label>Método de pago</label>
+                            <div class="payment-options">
+                                <button class="payment-option active" data-method="Transferencia bancaria">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+                                    <span>Banco</span>
+                                </button>
+                                <button class="payment-option" data-method="Billetera digital">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M2 10h20"></path><path d="M6 16h.01"></path><path d="M10 16h.01"></path></svg>
+                                    <span>Wallet</span>
+                                </button>
+                                <button class="payment-option" data-method="Efectivo">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                                    <span>Efectivo</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Botón de acción -->
+                        <button class="exchange-btn" id="exchangeBtn">
+                            <span>Iniciar intercambio</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                        </button>
+
+                        <p class="exchange-disclaimer">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                            Tus fondos están protegidos con escrow hasta confirmar
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Panel lateral con ofertas P2P -->
+                <div class="p2p-offers">
+                    <h3>Ofertas disponibles</h3>
+                    <p class="offers-subtitle">Usuarios verificados listos para intercambiar</p>
+
+                    <div class="offers-list" id="offersList">
+                        <div class="offer-card">
+                            <div class="offer-user">
+                                <div class="user-avatar">JM</div>
+                                <div class="user-info">
+                                    <span class="user-name">Juan M.</span>
+                                    <div class="user-rating">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                                        <span>4.9 (127 ops)</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="offer-details">
+                                <span class="offer-rate">17.28 MXN</span>
+                                <span class="offer-limit">USD 100 - 5,000</span>
+                            </div>
+                            <span class="offer-time">~3 min</span>
+                        </div>
+
+                        <div class="offer-card">
+                            <div class="offer-user">
+                                <div class="user-avatar">MC</div>
+                                <div class="user-info">
+                                    <span class="user-name">María C.</span>
+                                    <div class="user-rating">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                                        <span>4.8 (89 ops)</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="offer-details">
+                                <span class="offer-rate">17.25 MXN</span>
+                                <span class="offer-limit">USD 50 - 2,000</span>
+                            </div>
+                            <span class="offer-time">~5 min</span>
+                        </div>
+
+                        <div class="offer-card">
+                            <div class="offer-user">
+                                <div class="user-avatar">RL</div>
+                                <div class="user-info">
+                                    <span class="user-name">Roberto L.</span>
+                                    <div class="user-rating">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                                        <span>5.0 (234 ops)</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="offer-details">
+                                <span class="offer-rate">17.22 MXN</span>
+                                <span class="offer-limit">USD 500 - 10,000</span>
+                            </div>
+                            <span class="offer-time">~2 min</span>
+                        </div>
+
+                        <div class="offer-card">
+                            <div class="offer-user">
+                                <div class="user-avatar">AS</div>
+                                <div class="user-info">
+                                    <span class="user-name">Ana S.</span>
+                                    <div class="user-rating">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                                        <span>4.7 (56 ops)</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="offer-details">
+                                <span class="offer-rate">17.30 MXN</span>
+                                <span class="offer-limit">USD 20 - 1,000</span>
+                            </div>
+                            <span class="offer-time">~8 min</span>
+                        </div>
+                    </div>
+
+                    <div class="offers-footer">
+                        <span class="verified-badge">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                            Todos los usuarios verificados
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Modal de confirmación -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-icon success">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </div>
+                <h3>¡Operación simulada!</h3>
+                <p>Esta es una demostración de cómo funcionaría tu intercambio.</p>
+            </div>
+            <div class="modal-body">
+                <div class="modal-summary">
+                    <div class="summary-row">
+                        <span>Enviaste</span>
+                        <strong id="modalSent">1,000.00 USD</strong>
+                    </div>
+                    <div class="summary-arrow">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
+                    </div>
+                    <div class="summary-row">
+                        <span>Recibirías</span>
+                        <strong id="modalReceived" class="highlight">17,250.00 MXN</strong>
+                    </div>
+                </div>
+                <div class="modal-details">
+                    <p><strong>En una operación real:</strong></p>
+                    <ul>
+                        <li>Verificaríamos tu identidad (KYC)</li>
+                        <li>Conectarías con un usuario P2P verificado</li>
+                        <li>Tus fondos estarían protegidos en escrow</li>
+                        <li>Recibirías el dinero en minutos</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" id="modalClose">Cerrar</button>
+                <a href="#descargar" class="btn btn-primary" id="modalDownload">Descargar App</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Currency Selector Modal -->
+    <div class="currency-modal-overlay" id="currencyModalOverlay">
+        <div class="currency-modal">
+            <div class="currency-modal-header">
+                <h3>Seleccionar moneda</h3>
+                <button class="currency-modal-close" id="currencyModalClose">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div class="currency-search">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" id="currencySearch" placeholder="Buscar moneda...">
+            </div>
+            <div class="currency-list" id="currencyList">
+                <!-- Se llena dinámicamente -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Cómo Funciona -->
+    <section class="how-it-works" id="como-funciona">
+        <div class="container">
+            <div class="section-header">
+                <h2>¿Cómo funciona <span class="highlight">Flow Money</span>?</h2>
+                <p>Intercambiar divisas nunca fue tan sencillo. En solo 3 pasos puedes enviar o recibir dinero.</p>
+            </div>
+            <div class="steps-grid">
+                <div class="step-card">
+                    <div class="step-number">1</div>
+                    <div class="step-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                    </div>
+                    <h3>Crea tu cuenta</h3>
+                    <p>Regístrate en minutos con tu email o número de teléfono. Verifica tu identidad de forma segura.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">2</div>
+                    <div class="step-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="1" x2="12" y2="23"></line>
+                            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                        </svg>
+                    </div>
+                    <h3>Elige tu operación</h3>
+                    <p>Selecciona las divisas que quieres intercambiar y el monto. Verás la tasa en tiempo real.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">3</div>
+                    <div class="step-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                    </div>
+                    <h3>¡Listo!</h3>
+                    <p>Confirma la operación y recibe tu dinero en minutos. Así de fácil, así de rápido.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Beneficios -->
+    <section class="benefits" id="beneficios">
+        <div class="container">
+            <div class="benefits-content">
+                <div class="benefits-image">
+                    <img src="Flowney.png" alt="Flowney - Mascota de Flow Money">
+                </div>
+                <div class="benefits-text">
+                    <h2>¿Por qué elegir <span class="highlight">Flow Money</span>?</h2>
+                    <div class="benefits-list">
+                        <div class="benefit-item">
+                            <div class="benefit-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                </svg>
+                            </div>
+                            <div class="benefit-content">
+                                <h4>Rapidez garantizada</h4>
+                                <p>Transacciones completadas en minutos, no en días. Tu tiempo es valioso.</p>
+                            </div>
+                        </div>
+                        <div class="benefit-item">
+                            <div class="benefit-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                                </svg>
+                            </div>
+                            <div class="benefit-content">
+                                <h4>100% Seguro</h4>
+                                <p>Protección de fondos con escrow y verificación de identidad avanzada.</p>
+                            </div>
+                        </div>
+                        <div class="benefit-item">
+                            <div class="benefit-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="12" y1="1" x2="12" y2="23"></line>
+                                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                                </svg>
+                            </div>
+                            <div class="benefit-content">
+                                <h4>Mejores tasas</h4>
+                                <p>Sin intermediarios bancarios. Tasas competitivas directamente entre usuarios.</p>
+                            </div>
+                        </div>
+                        <div class="benefit-item">
+                            <div class="benefit-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="9" cy="7" r="4"></circle>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                </svg>
+                            </div>
+                            <div class="benefit-content">
+                                <h4>Comunidad P2P</h4>
+                                <p>Conecta directamente con otros usuarios. Más transparencia, menos comisiones.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Seguridad -->
+    <section class="security" id="seguridad">
+        <div class="container">
+            <div class="section-header">
+                <h2>Tu dinero está <span class="highlight">protegido</span></h2>
+                <p>Utilizamos las tecnologías más avanzadas para garantizar la seguridad de tus fondos y datos.</p>
+            </div>
+            <div class="security-grid">
+                <div class="security-card">
+                    <div class="security-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
+                    </div>
+                    <h4>Encriptación de datos</h4>
+                    <p>Cifrado de extremo a extremo en todas tus transacciones y datos personales.</p>
+                </div>
+                <div class="security-card">
+                    <div class="security-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                            <polyline points="9 12 11 14 15 10"></polyline>
+                        </svg>
+                    </div>
+                    <h4>Sistema Escrow</h4>
+                    <p>Tus fondos están protegidos hasta que ambas partes confirmen la transacción.</p>
+                </div>
+                <div class="security-card">
+                    <div class="security-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                        </svg>
+                    </div>
+                    <h4>Verificación KYC</h4>
+                    <p>Todos los usuarios verificados para prevenir fraudes y garantizar confianza.</p>
+                </div>
+                <div class="security-card">
+                    <div class="security-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                        </svg>
+                    </div>
+                    <h4>Soporte 24/7</h4>
+                    <p>Equipo de soporte disponible las 24 horas para resolver cualquier inconveniente.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Países -->
+    <section class="countries">
+        <div class="container">
+            <div class="section-header">
+                <h2>Disponible en <span class="highlight">toda la región</span></h2>
+                <p>Conectamos Latinoamérica y España con las mejores tasas de cambio.</p>
+            </div>
+            <div class="countries-grid">
+                <div class="country-badge">Argentina</div>
+                <div class="country-badge">México</div>
+                <div class="country-badge">Colombia</div>
+                <div class="country-badge">Chile</div>
+                <div class="country-badge">Perú</div>
+                <div class="country-badge">Venezuela</div>
+                <div class="country-badge">Ecuador</div>
+                <div class="country-badge">España</div>
+                <div class="country-badge">Brasil</div>
+                <div class="country-badge">Uruguay</div>
+                <div class="country-badge">Paraguay</div>
+                <div class="country-badge">Bolivia</div>
+                <div class="country-badge">Panamá</div>
+                <div class="country-badge">Costa Rica</div>
+                <div class="country-badge">República Dominicana</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA / Descargar -->
+    <section class="cta-section" id="descargar">
+        <div class="container">
+            <div class="cta-content">
+                <h2>Comienza a intercambiar <span class="highlight">hoy mismo</span></h2>
+                <p>Descarga Flow Money y únete a miles de usuarios que ya confían en nosotros para sus intercambios de divisas.</p>
+                <div class="cta-buttons">
+                    <a href="#" class="store-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+                        </svg>
+                        <div class="store-text">
+                            <span>Descárgalo en</span>
+                            <strong>App Store</strong>
+                        </div>
+                    </a>
+                    <a href="#" class="store-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734a1 1 0 0 1 .609-.92zm10.89 10.893l2.302 2.302-10.937 6.333 8.635-8.635zm3.199-3.198l2.807 1.626a1 1 0 0 1 0 1.73l-2.808 1.626L15.206 12l2.492-2.491zM5.864 2.658L16.8 8.99l-2.302 2.302-8.634-8.634z"/>
+                        </svg>
+                        <div class="store-text">
+                            <span>Disponible en</span>
+                            <strong>Google Play</strong>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer" id="contacto">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <img src="flowmoneylogo.png" alt="Flow Money Logo" class="footer-logo">
+                    <p>La plataforma P2P de intercambio de divisas más confiable de Latinoamérica y España.</p>
+                    <div class="social-links">
+                        <a href="#" aria-label="Facebook">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                            </svg>
+                        </a>
+                        <a href="#" aria-label="Instagram">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
+                            </svg>
+                        </a>
+                        <a href="#" aria-label="Twitter">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                            </svg>
+                        </a>
+                        <a href="#" aria-label="LinkedIn">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+                <div class="footer-links">
+                    <h4>Producto</h4>
+                    <ul>
+                        <li><a href="#">Cómo funciona</a></li>
+                        <li><a href="#">Tasas de cambio</a></li>
+                        <li><a href="#">Comisiones</a></li>
+                        <li><a href="#">Seguridad</a></li>
+                    </ul>
+                </div>
+                <div class="footer-links">
+                    <h4>Compañía</h4>
+                    <ul>
+                        <li><a href="#">Sobre nosotros</a></li>
+                        <li><a href="#">Blog</a></li>
+                        <li><a href="#">Prensa</a></li>
+                        <li><a href="#">Empleos</a></li>
+                    </ul>
+                </div>
+                <div class="footer-links">
+                    <h4>Soporte</h4>
+                    <ul>
+                        <li><a href="#">Centro de ayuda</a></li>
+                        <li><a href="#">Contacto</a></li>
+                        <li><a href="#">FAQ</a></li>
+                        <li><a href="#">Estado del servicio</a></li>
+                    </ul>
+                </div>
+                <div class="footer-links">
+                    <h4>Legal</h4>
+                    <ul>
+                        <li><a href="#">Términos de uso</a></li>
+                        <li><a href="#">Privacidad</a></li>
+                        <li><a href="#">Cookies</a></li>
+                        <li><a href="#">Licencias</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Flow Money. Todos los derechos reservados.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
