@@ -16,7 +16,7 @@
             <img src="flowmoneylogoblue.png" alt="Flow Money">
         </a>
         <h1>Bienvenido de nuevo</h1>
-        <p class="auth-subtitle">Inicia sesión para intercambiar dinero simulado</p>
+        <p class="auth-subtitle" id="authSubtitle">Inicia sesión para intercambiar dinero simulado</p>
 
         <form id="loginForm" class="auth-form">
             <div class="form-group">
@@ -43,6 +43,12 @@
         const form = document.getElementById('loginForm');
         const errorBox = document.getElementById('loginError');
         const loginBtn = document.getElementById('loginBtn');
+
+        // Si viene de "Iniciar intercambio" en la landing, explicar por qué pedimos sesión
+        if (new URLSearchParams(window.location.search).get('next') === 'exchange') {
+            document.getElementById('authSubtitle').textContent =
+                'Inicia sesión para completar el intercambio que preparaste';
+        }
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();

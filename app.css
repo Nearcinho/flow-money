@@ -284,6 +284,7 @@ body {
 
 .tx-item.tx-out { border-left-color: #e8a13c; }
 .tx-item.tx-in { border-left-color: #1a9e5c; }
+.tx-item.tx-exchange { border-left-color: var(--turquoise); }
 
 .tx-icon {
     width: 36px;

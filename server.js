@@ -170,10 +170,50 @@ app.post('/api/transfer', requireAuth, (req, res) => {
 
     const tx = {
         id: crypto.randomBytes(8).toString('hex'),
+        type: 'transfer',
         from: req.user.username,
         fromName: req.user.name,
         to: recipient.username,
         toName: recipient.name,
+        amountSent: value,
+        currencySent: fromCurrency,
+        amountReceived: +received.toFixed(2),
+        currencyReceived: toCurrency,
+        rate: +(RATES[toCurrency] / RATES[fromCurrency]).toFixed(6),
+        date: new Date().toISOString()
+    };
+    data.transactions.push(tx);
+    saveData();
+
+    res.json({ ok: true, transaction: tx, balances: req.user.balances });
+});
+
+// Intercambio de divisas dentro de la propia cuenta
+app.post('/api/exchange', requireAuth, (req, res) => {
+    const { fromCurrency, toCurrency, amount } = req.body || {};
+    const value = Number(amount);
+
+    if (!RATES[fromCurrency] || !RATES[toCurrency]) return res.status(400).json({ error: 'Moneda no válida' });
+    if (fromCurrency === toCurrency) return res.status(400).json({ error: 'Elige dos monedas distintas' });
+    if (!isFinite(value) || value <= 0) return res.status(400).json({ error: 'Monto no válido' });
+
+    const balance = req.user.balances[fromCurrency] || 0;
+    if (value > balance) {
+        return res.status(400).json({ error: `Fondos insuficientes. Tienes ${balance.toFixed(2)} ${fromCurrency}` });
+    }
+
+    const received = convert(value, fromCurrency, toCurrency);
+
+    req.user.balances[fromCurrency] = +(balance - value).toFixed(2);
+    req.user.balances[toCurrency] = +(((req.user.balances[toCurrency] || 0) + received)).toFixed(2);
+
+    const tx = {
+        id: crypto.randomBytes(8).toString('hex'),
+        type: 'exchange',
+        from: req.user.username,
+        fromName: req.user.name,
+        to: req.user.username,
+        toName: req.user.name,
         amountSent: value,
         currencySent: fromCurrency,
         amountReceived: +received.toFixed(2),

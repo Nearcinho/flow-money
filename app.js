@@ -63,14 +63,36 @@ async function loadSession() {
         .join('');
     document.getElementById('fromCurrency').innerHTML = currencyOptions;
     document.getElementById('toCurrency').innerHTML = currencyOptions;
+    document.getElementById('exFromCurrency').innerHTML = currencyOptions;
+    document.getElementById('exToCurrency').innerHTML = currencyOptions;
 
     // Monedas por defecto: primera con saldo para enviar, CLP para recibir
     const firstWithBalance = Object.keys(user.balances).find(c => user.balances[c] > 0) || 'USD';
     document.getElementById('fromCurrency').value = firstWithBalance;
     document.getElementById('toCurrency').value = 'CLP';
+    document.getElementById('exFromCurrency').value = firstWithBalance;
+    document.getElementById('exToCurrency').value = 'CLP';
 
+    applyPendingExchange();
     renderBalances();
     updateConversion();
+    updateExchangeConversion();
+}
+
+// Si el usuario viene de la landing con un intercambio pendiente, pre-llenar el formulario
+function applyPendingExchange() {
+    const raw = sessionStorage.getItem('pendingExchange');
+    if (!raw) return;
+    sessionStorage.removeItem('pendingExchange');
+
+    try {
+        const p = JSON.parse(raw);
+        if (state.rates[p.from]) document.getElementById('exFromCurrency').value = p.from;
+        if (state.rates[p.to]) document.getElementById('exToCurrency').value = p.to;
+        if (p.amount > 0) document.getElementById('exAmount').value = p.amount;
+        document.getElementById('exchangePanel').scrollIntoView({ behavior: 'smooth' });
+        showToast('Completa tu intercambio y confírmalo aquí');
+    } catch (e) { /* dato corrupto: se ignora */ }
 }
 
 function renderBalances() {
@@ -88,6 +110,7 @@ function renderBalances() {
     `).join('');
 
     updateFromHint();
+    updateExchangeConversion();
 }
 
 function updateFromHint() {
@@ -113,6 +136,25 @@ function updateConversion() {
     updateFromHint();
 }
 
+// ===== Intercambio de divisas propias =====
+function updateExchangeConversion() {
+    const amount = parseFloat(document.getElementById('exAmount').value) || 0;
+    const from = document.getElementById('exFromCurrency').value;
+    const to = document.getElementById('exToCurrency').value;
+
+    if (!state.rates || !from || !to || !state.user) return;
+
+    const rate = state.rates[to] / state.rates[from];
+    const received = amount * rate;
+    const balance = state.user.balances[from] || 0;
+
+    document.getElementById('exReceived').value = received
+        ? received.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        : '';
+    document.getElementById('exRateHint').textContent = `1 ${from} = ${rate.toLocaleString('es-CL', { maximumFractionDigits: 4 })} ${to}`;
+    document.getElementById('exFromHint').textContent = `Disponible: ${fmt(balance, from)}`;
+}
+
 async function loadTransactions() {
     const { transactions } = await api('/api/transactions');
     const list = document.getElementById('txList');
@@ -126,7 +168,7 @@ async function loadTransactions() {
     // Notificar transferencias recibidas nuevas
     const newest = transactions[0];
     if (!state.firstLoad && state.lastTxId && newest.id !== state.lastTxId) {
-        const incoming = transactions.filter(t => t.to === state.user.username &&
+        const incoming = transactions.filter(t => t.type !== 'exchange' && t.to === state.user.username &&
             (!state.lastTxId || !document.querySelector(`[data-tx="${t.id}"]`)));
         incoming.forEach(t => showToast(`💸 Recibiste ${fmt(t.amountReceived, t.currencyReceived)} de ${t.fromName}`));
     }
@@ -134,13 +176,18 @@ async function loadTransactions() {
     state.firstLoad = false;
 
     list.innerHTML = transactions.map(t => {
-        const isOutgoing = t.from === state.user.username;
+        const isExchange = t.type === 'exchange';
+        const isOutgoing = !isExchange && t.from === state.user.username;
         const date = new Date(t.date).toLocaleString('es-CL');
+        const title = isExchange
+            ? 'Intercambio de divisas'
+            : (isOutgoing ? `Enviado a ${t.toName}` : `Recibido de ${t.fromName}`);
+        const icon = isExchange ? '⇄' : (isOutgoing ? '↗' : '↙');
         return `
-            <div class="tx-item ${isOutgoing ? 'tx-out' : 'tx-in'}" data-tx="${t.id}">
-                <div class="tx-icon">${isOutgoing ? '↗' : '↙'}</div>
+            <div class="tx-item ${isExchange ? 'tx-exchange' : (isOutgoing ? 'tx-out' : 'tx-in')}" data-tx="${t.id}">
+                <div class="tx-icon">${icon}</div>
                 <div class="tx-details">
-                    <strong>${isOutgoing ? `Enviado a ${t.toName}` : `Recibido de ${t.fromName}`}</strong>
+                    <strong>${title}</strong>
                     <span class="tx-date">${date}</span>
                 </div>
                 <div class="tx-amounts">
@@ -171,6 +218,49 @@ async function poll() {
 document.getElementById('amount').addEventListener('input', updateConversion);
 document.getElementById('fromCurrency').addEventListener('change', updateConversion);
 document.getElementById('toCurrency').addEventListener('change', updateConversion);
+document.getElementById('exAmount').addEventListener('input', updateExchangeConversion);
+document.getElementById('exFromCurrency').addEventListener('change', updateExchangeConversion);
+document.getElementById('exToCurrency').addEventListener('change', updateExchangeConversion);
+
+document.getElementById('exchangeForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errorBox = document.getElementById('exError');
+    const successBox = document.getElementById('exSuccess');
+    const btn = document.getElementById('exBtn');
+    errorBox.textContent = '';
+    successBox.textContent = '';
+    btn.disabled = true;
+
+    try {
+        const res = await fetch('/api/exchange', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                fromCurrency: document.getElementById('exFromCurrency').value,
+                toCurrency: document.getElementById('exToCurrency').value,
+                amount: parseFloat(document.getElementById('exAmount').value)
+            })
+        });
+        const json = await res.json();
+
+        if (!res.ok) {
+            errorBox.textContent = json.error || 'Error en el intercambio';
+        } else {
+            const t = json.transaction;
+            successBox.textContent = `✓ Intercambiaste ${fmt(t.amountSent, t.currencySent)} por ${fmt(t.amountReceived, t.currencyReceived)}`;
+            document.getElementById('exAmount').value = '';
+            state.user.balances = json.balances;
+            renderBalances();
+            updateConversion();
+            updateExchangeConversion();
+            await loadTransactions();
+        }
+    } catch (err) {
+        errorBox.textContent = 'No se pudo conectar con el servidor';
+    } finally {
+        btn.disabled = false;
+    }
+});
 
 document.getElementById('transferForm').addEventListener('submit', async (e) => {
     e.preventDefault();

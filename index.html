@@ -271,43 +271,34 @@
         </div>
     </section>
 
-    <!-- Modal de confirmación -->
+    <!-- Modal: inicia sesión para continuar -->
     <div class="modal-overlay" id="modalOverlay">
         <div class="modal-content">
             <div class="modal-header">
                 <div class="modal-icon success">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                 </div>
-                <h3>¡Operación simulada!</h3>
-                <p>Esta es una demostración de cómo funcionaría tu intercambio.</p>
+                <h3>Inicia sesión para continuar</h3>
+                <p>Tu intercambio está listo. Entra a tu cuenta para completarlo dentro de la plataforma.</p>
             </div>
             <div class="modal-body">
                 <div class="modal-summary">
                     <div class="summary-row">
-                        <span>Enviaste</span>
+                        <span>Envías</span>
                         <strong id="modalSent">1,000.00 USD</strong>
                     </div>
                     <div class="summary-arrow">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
                     </div>
                     <div class="summary-row">
-                        <span>Recibirías</span>
+                        <span>Recibes</span>
                         <strong id="modalReceived" class="highlight">17,250.00 MXN</strong>
                     </div>
                 </div>
-                <div class="modal-details">
-                    <p><strong>En una operación real:</strong></p>
-                    <ul>
-                        <li>Verificaríamos tu identidad (KYC)</li>
-                        <li>Conectarías con un usuario P2P verificado</li>
-                        <li>Tus fondos estarían protegidos en escrow</li>
-                        <li>Recibirías el dinero en minutos</li>
-                    </ul>
-                </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-outline" id="modalClose">Cerrar</button>
-                <a href="#descargar" class="btn btn-primary" id="modalDownload">Descargar App</a>
+                <button class="btn btn-outline" id="modalClose">Cancelar</button>
+                <button class="btn btn-primary" id="modalLogin">Iniciar sesión</button>
             </div>
         </div>
     </div>

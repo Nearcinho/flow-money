@@ -109,9 +109,26 @@ document.addEventListener('DOMContentLoaded', function() {
     // Confirmation Modal elements
     const modalOverlay = document.getElementById('modalOverlay');
     const modalClose = document.getElementById('modalClose');
-    const modalDownload = document.getElementById('modalDownload');
+    const modalLogin = document.getElementById('modalLogin');
     const modalSent = document.getElementById('modalSent');
     const modalReceived = document.getElementById('modalReceived');
+
+    // ===== Sesión: detectar si el usuario ya está logueado =====
+    let sessionUser = null;
+    const navCta = document.querySelector('.nav-cta');
+
+    fetch('/api/me')
+        .then(res => res.ok ? res.json() : null)
+        .then(json => {
+            if (json && json.user) {
+                sessionUser = json.user;
+                if (navCta) {
+                    navCta.textContent = 'Mi cuenta';
+                    navCta.setAttribute('href', 'app.html');
+                }
+            }
+        })
+        .catch(() => { /* servidor no disponible: se comporta como no logueado */ });
 
     // Calculate exchange
     function calculateExchange() {
@@ -215,15 +232,32 @@ document.addEventListener('DOMContentLoaded', function() {
         updateCurrencyDisplay();
     }
 
-    // Open confirmation modal
-    function openConfirmationModal() {
+    // Guarda el intercambio pendiente y decide a dónde ir
+    function startExchange() {
         const sendAmount = parseFloat(sendAmountInput.value) || 0;
         const receiveAmount = receiveAmountInput.value;
 
-        modalSent.textContent = `${formatNumber(sendAmount)} ${sendCurrency.code}`;
-        modalReceived.textContent = `${receiveAmount} ${receiveCurrency.code}`;
+        if (sendAmount <= 0) {
+            sendAmountInput.focus();
+            return;
+        }
 
-        modalOverlay.classList.add('active');
+        // Guardar para que la plataforma lo retome después del login/redirección
+        sessionStorage.setItem('pendingExchange', JSON.stringify({
+            amount: sendAmount,
+            from: sendCurrency.code,
+            to: receiveCurrency.code
+        }));
+
+        if (sessionUser) {
+            // Logueado: iniciar el intercambio dentro de la plataforma
+            window.location.href = 'app.html';
+        } else {
+            // No logueado: mostrar opción de iniciar sesión
+            modalSent.textContent = `${formatNumber(sendAmount)} ${sendCurrency.code}`;
+            modalReceived.textContent = `${receiveAmount} ${receiveCurrency.code}`;
+            modalOverlay.classList.add('active');
+        }
     }
 
     // Close confirmation modal
@@ -267,15 +301,17 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     if (exchangeBtn) {
-        exchangeBtn.addEventListener('click', openConfirmationModal);
+        exchangeBtn.addEventListener('click', startExchange);
     }
 
     if (modalClose) {
         modalClose.addEventListener('click', closeConfirmationModal);
     }
 
-    if (modalDownload) {
-        modalDownload.addEventListener('click', closeConfirmationModal);
+    if (modalLogin) {
+        modalLogin.addEventListener('click', () => {
+            window.location.href = 'login.html?next=exchange';
+        });
     }
 
     if (modalOverlay) {
