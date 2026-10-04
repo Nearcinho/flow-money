@@ -1,0 +1,12 @@
+{
+  "name": "flow-money",
+  "version": "1.0.0",
+  "description": "Flow Money - Simulador de intercambio de divisas P2P con cuentas",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

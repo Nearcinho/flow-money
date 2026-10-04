@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi cuenta - Flow Money</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="app.css">
+    <link rel="icon" type="image/png" href="flowmoneylogo.png">
+</head>
+<body class="app-body">
+    <header class="app-header">
+        <div class="app-header-inner">
+            <a href="index.html" class="app-logo">
+                <img src="flowmoneylogoblue.png" alt="Flow Money">
+            </a>
+            <div class="app-user">
+                <div class="app-user-badge">
+                    <span class="app-avatar" id="userAvatar">?</span>
+                    <div class="app-user-info">
+                        <strong id="userName">...</strong>
+                        <span id="userUsername">@...</span>
+                    </div>
+                </div>
+                <button class="btn-ghost" id="resetBtn" title="Reiniciar saldos e historial">Reiniciar demo</button>
+                <button class="btn-ghost" id="logoutBtn">Cerrar sesión</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="app-main">
+        <!-- Saldos -->
+        <section class="panel">
+            <h2>Mis saldos</h2>
+            <p class="panel-subtitle">Se actualizan automáticamente cuando recibes dinero</p>
+            <div class="balances-grid" id="balancesGrid"></div>
+        </section>
+
+        <!-- Transferencia -->
+        <section class="panel">
+            <h2>Enviar dinero</h2>
+            <p class="panel-subtitle">Transfiere a otra cuenta con conversión de moneda incluida</p>
+
+            <form id="transferForm" class="transfer-form">
+                <div class="form-group">
+                    <label for="recipient">Destinatario</label>
+                    <select id="recipient" required></select>
+                </div>
+
+                <div class="transfer-currencies">
+                    <div class="form-group">
+                        <label for="amount">Envías</label>
+                        <div class="amount-row">
+                            <input type="number" id="amount" min="0.01" step="0.01" required placeholder="0.00">
+                            <select id="fromCurrency"></select>
+                        </div>
+                        <span class="balance-hint" id="fromBalanceHint"></span>
+                    </div>
+
+                    <div class="transfer-arrow">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                            <polyline points="12 5 19 12 12 19"></polyline>
+                        </svg>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="toCurrency">Recibe</label>
+                        <div class="amount-row">
+                            <input type="text" id="receivedAmount" readonly placeholder="0.00">
+                            <select id="toCurrency"></select>
+                        </div>
+                        <span class="balance-hint" id="rateHint"></span>
+                    </div>
+                </div>
+
+                <div class="auth-error" id="transferError"></div>
+                <div class="transfer-success" id="transferSuccess"></div>
+
+                <button type="submit" class="btn-primary-full" id="transferBtn">Confirmar transferencia</button>
+            </form>
+        </section>
+
+        <!-- Historial -->
+        <section class="panel">
+            <h2>Historial de movimientos</h2>
+            <p class="panel-subtitle">Transferencias enviadas y recibidas</p>
+            <div class="tx-list" id="txList">
+                <p class="tx-empty">Aún no hay movimientos</p>
+            </div>
+        </section>
+    </main>
+
+    <!-- Notificación de dinero recibido -->
+    <div class="toast" id="toast"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>

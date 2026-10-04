@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: flow-money
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
