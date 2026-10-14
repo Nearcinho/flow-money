@@ -24,9 +24,14 @@ function showToast(message) {
     setTimeout(() => toast.classList.remove('visible'), 5000);
 }
 
-async function api(path, options) {
+async function api(path, options, retries = 2) {
     const res = await fetch(path, options);
     if (res.status === 401) {
+        // Puede ser un 401 transitorio (servidor despertando): reintenta antes de expulsar
+        if (retries > 0) {
+            await new Promise(r => setTimeout(r, 1500));
+            return api(path, options, retries - 1);
+        }
         window.location.href = 'login.html';
         throw new Error('No autenticado');
     }

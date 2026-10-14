@@ -53,8 +53,7 @@ function seedData() {
             }
         ],
         transactions: [],
-        orders: [],
-        sessions: {}
+        orders: []
     };
 }
 
@@ -63,12 +62,6 @@ function loadData() {
         const parsed = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
         if (!Array.isArray(parsed.orders)) parsed.orders = [];
         if (!Array.isArray(parsed.transactions)) parsed.transactions = [];
-        if (!parsed.sessions || typeof parsed.sessions !== 'object') parsed.sessions = {};
-        // Limpia sesiones expiradas al cargar
-        const now = Date.now();
-        Object.keys(parsed.sessions).forEach(t => {
-            if (new Date(parsed.sessions[t].expiresAt).getTime() < now) delete parsed.sessions[t];
-        });
         return parsed;
     } catch (e) {
         const data = seedData();
@@ -83,27 +76,20 @@ function saveData() {
 
 let data = loadData();
 
-// ===== Sesiones persistentes en data.json (7 dias): token -> { username, createdAt, expiresAt } =====
-// Así sobreviven a los reinicios del proceso (Render duerme la app en el plan gratis)
-const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+// ===== Sesiones autocontenidas (30 dias): cookie firmada con HMAC, sin estado =====
+// El token lleva username + expiracion + firma; no depende de data.json, asi que
+// la sesion sobrevive a reinicios y a la perdida del filesystem efimero de Render.
+const SESSION_SECRET = process.env.SESSION_SECRET || 'flow-money-demo-secret';
+const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const SESSION_COOKIE_AGE = Math.floor(SESSION_TTL_MS / 1000);
 
-function createSession(username) {
-    const token = crypto.randomBytes(24).toString('hex');
-    data.sessions[token] = {
-        username,
-        createdAt: new Date().toISOString(),
-        expiresAt: new Date(Date.now() + SESSION_TTL_MS).toISOString()
-    };
-    saveData();
-    return token;
+function signSession(payload) {
+    return crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest('hex');
 }
 
-function destroySession(token) {
-    if (data.sessions && data.sessions[token]) {
-        delete data.sessions[token];
-        saveData();
-    }
+function createSessionToken(username) {
+    const payload = `${username}.${Date.now() + SESSION_TTL_MS}`;
+    return `${payload}.${signSession(payload)}`;
 }
 
 function parseCookies(req) {
@@ -119,13 +105,18 @@ function parseCookies(req) {
 function getSessionUser(req) {
     const token = parseCookies(req)['fm_token'];
     if (!token) return null;
-    const session = data.sessions[token];
-    if (!session) return null;
-    if (new Date(session.expiresAt).getTime() < Date.now()) {
-        destroySession(token);
-        return null;
-    }
-    return data.accounts.find(a => a.username === session.username) || null;
+
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const [username, expiresAt, sig] = parts;
+    if (!/^\d+$/.test(expiresAt)) return null;
+
+    const expected = Buffer.from(signSession(`${username}.${expiresAt}`), 'utf8');
+    const received = Buffer.from(String(sig), 'utf8');
+    if (expected.length !== received.length || !crypto.timingSafeEqual(expected, received)) return null;
+    if (Number(expiresAt) < Date.now()) return null;
+
+    return data.accounts.find(a => a.username === username) || null;
 }
 
 function requireAuth(req, res, next) {
@@ -190,14 +181,13 @@ app.post('/api/login', (req, res) => {
         return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
     }
 
-    const token = createSession(account.username);
+    const token = createSessionToken(account.username);
     res.setHeader('Set-Cookie', `fm_token=${token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${SESSION_COOKIE_AGE}`);
     res.json({ user: publicUser(account) });
 });
 
 app.post('/api/logout', (req, res) => {
-    const token = parseCookies(req)['fm_token'];
-    if (token) destroySession(token);
+    // La sesión es autocontenida: basta invalidar la cookie del cliente
     res.setHeader('Set-Cookie', 'fm_token=; HttpOnly; Path=/; Max-Age=0');
     res.json({ ok: true });
 });
@@ -481,14 +471,11 @@ app.post('/api/orders/:id/cancel', requireAuth, (req, res) => {
 });
 
 // Reinicia cuentas e historial (útil entre ensayos del tribunal)
+// La sesión es autocontenida y no se ve afectada por el reset
 app.post('/api/reset', requireAuth, (req, res) => {
-    const username = req.user.username;
     data = seedData();
-    // No expulsar a quien reinicia: su sesión se recrea sobre el nuevo seed
-    const token = createSession(username);
     saveData();
-    const account = data.accounts.find(a => a.username === username);
-    res.setHeader('Set-Cookie', `fm_token=${token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${SESSION_COOKIE_AGE}`);
+    const account = data.accounts.find(a => a.username === req.user.username);
     res.json({ ok: true, user: publicUser(account) });
 });
 
