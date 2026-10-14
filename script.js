@@ -9,14 +9,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // ===== Currencies Data =====
     const currencies = [
-        { code: 'USD', name: 'Dólar estadounidense', flag: '🇺🇸', rate: 1 },
-        { code: 'EUR', name: 'Euro', flag: '🇪🇺', rate: 0.92 },
-        { code: 'MXN', name: 'Peso mexicano', flag: '🇲🇽', rate: 17.25 },
-        { code: 'ARS', name: 'Peso argentino', flag: '🇦🇷', rate: 875.50 },
-        { code: 'COP', name: 'Peso colombiano', flag: '🇨🇴', rate: 3950.00 },
-        { code: 'CLP', name: 'Peso chileno', flag: '🇨🇱', rate: 885.00 },
-        { code: 'PEN', name: 'Sol peruano', flag: '🇵🇪', rate: 3.72 },
-        { code: 'VES', name: 'Bolívar venezolano', flag: '🇻🇪', rate: 36.50 }
+        { code: 'USD', name: 'Dólar estadounidense', rate: 1 },
+        { code: 'EUR', name: 'Euro', rate: 0.92 },
+        { code: 'MXN', name: 'Peso mexicano', rate: 17.25 },
+        { code: 'ARS', name: 'Peso argentino', rate: 875.50 },
+        { code: 'COP', name: 'Peso colombiano', rate: 3950.00 },
+        { code: 'CLP', name: 'Peso chileno', rate: 885.00 },
+        { code: 'PEN', name: 'Sol peruano', rate: 3.72 },
+        { code: 'VES', name: 'Bolívar venezolano', rate: 36.50 }
     ];
 
     // Exchange state
@@ -83,9 +83,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const sendCurrencyBtn = document.getElementById('sendCurrencyBtn');
     const receiveCurrencyBtn = document.getElementById('receiveCurrencyBtn');
     const sendFlag = document.getElementById('sendFlag');
-    const sendCode = document.getElementById('sendCode');
     const receiveFlag = document.getElementById('receiveFlag');
-    const receiveCode = document.getElementById('receiveCode');
     const exchangeRateDisplay = document.getElementById('exchangeRate');
     const swapBtn = document.getElementById('swapBtn');
     const exchangeBtn = document.getElementById('exchangeBtn');
@@ -158,10 +156,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Update currency display
     function updateCurrencyDisplay() {
-        sendFlag.textContent = sendCurrency.flag;
-        sendCode.textContent = sendCurrency.code;
-        receiveFlag.textContent = receiveCurrency.flag;
-        receiveCode.textContent = receiveCurrency.code;
+        sendFlag.textContent = sendCurrency.code;
+        receiveFlag.textContent = receiveCurrency.code;
         calculateExchange();
     }
 
@@ -188,7 +184,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const item = document.createElement('div');
             item.className = 'currency-item';
             item.innerHTML = `
-                <span class="flag">${currency.flag}</span>
+                <span class="currency-pill">${currency.code}</span>
                 <div class="info">
                     <span class="code">${currency.code}</span>
                     <span class="name">${currency.name}</span>

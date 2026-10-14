@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="app.css?v=5">
+    <link rel="stylesheet" href="app.css?v=7">
     <link rel="icon" type="image/png" href="flowmoneylogo.png">
 </head>
 <body class="auth-body">
@@ -62,7 +62,7 @@
 
         <!-- Paso 2: verificación de identidad (KYC) con QR -->
         <div id="stepKyc" hidden>
-            <div class="auth-steps"><span class="auth-step done">1. Tu cuenta ✓</span><span class="auth-step active">2. Verifica tu identidad</span></div>
+            <div class="auth-steps"><span class="auth-step done">1. Tu cuenta</span><span class="auth-step active">2. Verifica tu identidad</span></div>
             <h1>Verifica tu identidad</h1>
             <p class="auth-subtitle">Por regulación KYC necesitamos una foto de tu documento. Escanea el código con tu celular:</p>
 
@@ -77,7 +77,7 @@
 
         <!-- Paso 3: verificado -->
         <div id="stepDone" hidden>
-            <div class="kyc-success-icon">✓</div>
+            <div class="kyc-success-icon"><svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
             <h1>¡Identidad verificada!</h1>
             <p class="auth-subtitle">Tu cuenta está lista. Entrando a tu panel...</p>
             <div class="auth-error" id="loginError"></div>

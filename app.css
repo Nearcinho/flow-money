@@ -227,7 +227,7 @@ body {
 
 .balance-card:hover { border-color: var(--turquoise); transform: translateY(-2px); }
 
-.balance-flag { font-size: 1.9rem; }
+.balance-flag { font-size: 0.95rem; }
 
 .balance-info { display: flex; flex-direction: column; }
 .balance-amount { font-weight: 700; font-size: 1.15rem; }
@@ -673,3 +673,58 @@ body {
 .aml-check input { margin-top: 0.15rem; accent-color: var(--turquoise); }
 
 .order-badge.badge-aml { background: #e8f0fe; color: #1a56c4; }
+
+/* ===== Detección automática de documento (kyc.html) ===== */
+.kyc-frame.detected {
+    border: 2px solid #1a9e5c;
+    box-shadow: 0 0 0 3px rgba(26, 158, 92, 0.35);
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.kyc-frame.detected .kyc-scanline { display: none; }
+
+.kyc-flash {
+    position: absolute;
+    inset: 0;
+    background: var(--white);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.kyc-flash.active { animation: kyc-flash 0.45s ease; }
+
+@keyframes kyc-flash {
+    0% { opacity: 0; }
+    25% { opacity: 0.95; }
+    100% { opacity: 0; }
+}
+
+.kyc-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #5a6b7c;
+    margin-bottom: 0.9rem;
+}
+
+.kyc-status.detected { color: #1a9e5c; }
+
+.kyc-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--turquoise);
+    animation: kyc-pulse 1.2s ease-in-out infinite;
+}
+
+.kyc-status.detected .kyc-dot { background: #1a9e5c; animation: none; }
+
+@keyframes kyc-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+}
+
+.kyc-doc-option svg { flex-shrink: 0; color: var(--turquoise-dark); }

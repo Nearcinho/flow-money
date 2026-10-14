@@ -1,10 +1,5 @@
 // ===== Flow Money - Lógica del dashboard =====
 
-const FLAGS = {
-    USD: '🇺🇸', EUR: '🇪🇺', MXN: '🇲🇽', ARS: '🇦🇷',
-    COP: '🇨🇴', CLP: '🇨🇱', PEN: '🇵🇪', VES: '🇻🇪'
-};
-
 const state = {
     user: null,
     rates: null,
@@ -59,7 +54,7 @@ async function loadSession() {
         .join('');
 
     const currencyOptions = Object.keys(state.rates)
-        .map(code => `<option value="${code}">${FLAGS[code] || ''} ${code}</option>`)
+        .map(code => `<option value="${code}">${code}</option>`)
         .join('');
     document.getElementById('fromCurrency').innerHTML = currencyOptions;
     document.getElementById('toCurrency').innerHTML = currencyOptions;
@@ -103,7 +98,7 @@ function renderBalances() {
 
     grid.innerHTML = entries.map(([currency, amount]) => `
         <div class="balance-card">
-            <span class="balance-flag">${FLAGS[currency] || '💱'}</span>
+            <span class="balance-flag currency-pill">${currency}</span>
             <div class="balance-info">
                 <span class="balance-amount">${fmt(amount)}</span>
                 <span class="balance-currency">${currency}</span>
@@ -158,14 +153,14 @@ function updateOrderConversion() {
 }
 
 function orderBadge(o) {
-    if (o.status === 'open') return '<span class="order-badge badge-escrow">🔒 Fondos en custodia escrow</span>';
-    if (o.status === 'completed') return '<span class="order-badge badge-done">✓ Completada</span>';
+    if (o.status === 'open') return '<span class="order-badge badge-escrow">Fondos en custodia escrow</span>';
+    if (o.status === 'completed') return '<span class="order-badge badge-done">Completada</span>';
     return '<span class="order-badge badge-cancelled">Cancelada</span>';
 }
 
 // Sello AML: la orden (y sus transacciones) llevan el origen de fondos declarado
 function amlBadge(hasOrigin) {
-    return hasOrigin ? '<span class="order-badge badge-aml">AML ✓ Origen declarado</span>' : '';
+    return hasOrigin ? '<span class="order-badge badge-aml">AML · Origen declarado</span>' : '';
 }
 
 // ===== KYC: badge de identidad en el header =====
@@ -183,7 +178,7 @@ function renderKycBadge() {
     if (kyc.status === 'verified') {
         badge.className = 'kyc-badge kyc-verified';
         badge.innerHTML = (kyc.image ? `<img class="kyc-thumb" src="${kyc.image}" alt="Documento de identidad">` : '')
-            + `✓ Identidad verificada${docLabel ? ` (${docLabel})` : ''}`;
+            + `Identidad verificada${docLabel ? ` (${docLabel})` : ''}`;
         badge.title = kyc.image ? 'Clic para ver el documento' : '';
         // Doble protección: sin imagen el badge no es clickeable y el visor nunca abre
         badge.onclick = !kyc.image ? null : () => {
@@ -193,7 +188,7 @@ function renderKycBadge() {
         };
     } else {
         badge.className = 'kyc-badge kyc-pending';
-        badge.textContent = '⏳ Verificación pendiente';
+        badge.textContent = 'Verificación pendiente';
         badge.onclick = null;
     }
 }
@@ -320,7 +315,7 @@ document.getElementById('amlConfirm').addEventListener('click', async () => {
         } else {
             const o = json.order;
             document.getElementById('amlModal').hidden = true;
-            successBox.textContent = `✓ Oferta publicada: ${fmt(o.giveAmount, o.giveCurrency)} en custodia escrow, esperando contraparte`;
+            successBox.textContent = `Oferta publicada: ${fmt(o.giveAmount, o.giveCurrency)} en custodia escrow, esperando contraparte`;
             document.getElementById('ordAmount').value = '';
             state.user.balances = json.balances;
             renderBalances();
@@ -348,11 +343,11 @@ document.getElementById('p2pPanel').addEventListener('click', async (e) => {
         const json = await res.json();
 
         if (!res.ok) {
-            showToast(`⚠️ ${json.error || 'No se pudo completar la operación'}`);
+            showToast(json.error || 'No se pudo completar la operación');
         } else {
             if (acceptId) {
                 const o = json.order;
-                showToast(`✓ Intercambio completado: pagaste ${fmt(o.takerPay, o.wantCurrency)} y recibiste ${fmt(o.takerReceive, o.giveCurrency)}`);
+                showToast(`Intercambio completado: pagaste ${fmt(o.takerPay, o.wantCurrency)} y recibiste ${fmt(o.takerReceive, o.giveCurrency)}`);
             } else {
                 showToast('Oferta cancelada: el escrow devolvió tus fondos');
             }
@@ -362,7 +357,7 @@ document.getElementById('p2pPanel').addEventListener('click', async (e) => {
             await Promise.all([loadOrders(), loadTransactions()]);
         }
     } catch (err) {
-        showToast('⚠️ No se pudo conectar con el servidor');
+        showToast('No se pudo conectar con el servidor');
     }
 });
 
@@ -382,8 +377,8 @@ async function loadTransactions() {
         const incoming = transactions.filter(t => t.type !== 'exchange' && t.to === state.user.username &&
             (!state.lastTxId || !document.querySelector(`[data-tx="${t.id}"]`)));
         incoming.forEach(t => showToast(t.type === 'p2p'
-            ? `🔒✓ Intercambio P2P completado: recibiste ${fmt(t.amountReceived, t.currencyReceived)} de ${t.fromName}`
-            : `💸 Recibiste ${fmt(t.amountReceived, t.currencyReceived)} de ${t.fromName}`));
+            ? `Intercambio P2P completado: recibiste ${fmt(t.amountReceived, t.currencyReceived)} de ${t.fromName}`
+            : `Recibiste ${fmt(t.amountReceived, t.currencyReceived)} de ${t.fromName}`));
     }
     state.lastTxId = newest.id;
     state.firstLoad = false;
@@ -487,7 +482,7 @@ document.getElementById('transferForm').addEventListener('submit', async (e) => 
             errorBox.textContent = json.error || 'Error en la transferencia';
         } else {
             const t = json.transaction;
-            successBox.textContent = `✓ Enviaste ${fmt(t.amountSent, t.currencySent)} → ${t.toName} recibió ${fmt(t.amountReceived, t.currencyReceived)}`;
+            successBox.textContent = `Enviaste ${fmt(t.amountSent, t.currencySent)} → ${t.toName} recibió ${fmt(t.amountReceived, t.currencyReceived)}`;
             document.getElementById('amount').value = '';
             state.user.balances = json.balances;
             renderBalances();

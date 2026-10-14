@@ -953,13 +953,18 @@ ul {
     background: var(--turquoise-light);
 }
 
-.currency-flag {
-    font-size: 1.5rem;
-}
-
-.currency-code {
-    font-weight: 600;
+.currency-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 3rem;
+    padding: 0.3rem 0.55rem;
+    border-radius: 999px;
+    background: var(--turquoise-light, rgba(0, 196, 204, 0.12));
     color: var(--navy);
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 0.03em;
 }
 
 .currency-select svg {
@@ -1486,8 +1491,8 @@ ul {
     background: var(--turquoise-light);
 }
 
-.currency-item .flag {
-    font-size: 1.5rem;
+.currency-item .currency-pill {
+    flex-shrink: 0;
 }
 
 .currency-item .info {

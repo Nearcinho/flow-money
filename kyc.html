@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="app.css?v=5">
+    <link rel="stylesheet" href="app.css?v=7">
     <link rel="icon" type="image/png" href="flowmoneylogo.png">
 </head>
 <body class="auth-body kyc-body">
@@ -18,7 +18,9 @@
 
         <!-- Bienvenida -->
         <div id="kycWelcome">
-            <div class="kyc-shield">🛡️</div>
+            <div class="kyc-shield">
+                <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#00C4CC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg>
+            </div>
             <h1>Verificación de identidad</h1>
             <p class="auth-subtitle">Para cumplir la normativa KYC/AML, fotografía un documento de identidad vigente. Toma menos de un minuto.</p>
             <ul class="kyc-tips">
@@ -34,22 +36,33 @@
             <h1>Elige tu documento</h1>
             <p class="auth-subtitle">¿Con qué documento vas a verificarte?</p>
             <div class="kyc-doc-options">
-                <button class="kyc-doc-option" data-doc="dni"><span class="kyc-doc-icon">🪪</span> DNI / INE / Cédula</button>
-                <button class="kyc-doc-option" data-doc="pasaporte"><span class="kyc-doc-icon">📘</span> Pasaporte</button>
-                <button class="kyc-doc-option" data-doc="licencia"><span class="kyc-doc-icon">🚗</span> Licencia de conducir</button>
+                <button class="kyc-doc-option" data-doc="dni">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><circle cx="8" cy="10" r="2"></circle><line x1="5" y1="16" x2="11" y2="16"></line><line x1="14" y1="9" x2="19" y2="9"></line><line x1="14" y1="13" x2="19" y2="13"></line></svg>
+                    DNI / INE / Cédula
+                </button>
+                <button class="kyc-doc-option" data-doc="pasaporte">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path><circle cx="13" cy="10" r="3"></circle></svg>
+                    Pasaporte
+                </button>
+                <button class="kyc-doc-option" data-doc="licencia">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><circle cx="12" cy="11" r="3"></circle><path d="M8 16c.8-1.5 2.2-2 4-2s3.2.5 4 2"></path></svg>
+                    Licencia de conducir
+                </button>
             </div>
         </div>
 
-        <!-- Cámara -->
+        <!-- Cámara con detección automática -->
         <div id="kycCamera" hidden>
             <h1>Escanea tu documento</h1>
-            <p class="auth-subtitle">Encuadra el documento dentro del marco</p>
+            <p class="auth-subtitle">Encuadra el documento dentro del marco; la foto se tomará sola al detectarlo</p>
             <div class="kyc-viewfinder">
                 <video id="kycVideo" autoplay playsinline muted></video>
-                <div class="kyc-frame"><div class="kyc-scanline"></div></div>
+                <div class="kyc-frame" id="kycFrame"><div class="kyc-scanline"></div></div>
+                <div class="kyc-flash" id="kycFlash"></div>
             </div>
+            <p class="kyc-status" id="kycStatus"><span class="kyc-dot"></span> Buscando documento...</p>
             <div class="auth-error" id="cameraError"></div>
-            <button class="btn-primary-full" id="captureBtn">📸 Capturar documento</button>
+            <button class="btn-primary-full" id="captureBtn">Capturar documento</button>
             <label class="kyc-file-fallback">
                 ¿Sin cámara? <span class="auth-link">Sube una foto del documento</span>
                 <input type="file" id="fileFallback" accept="image/*" hidden>
@@ -68,7 +81,7 @@
 
         <!-- Éxito -->
         <div id="kycDone" hidden>
-            <div class="kyc-success-icon">✓</div>
+            <div class="kyc-success-icon"><svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
             <h1>Documento recibido</h1>
             <p class="auth-subtitle">Tu identidad ha sido verificada correctamente.<br><strong>Puedes volver al computador.</strong></p>
         </div>
@@ -99,22 +112,130 @@
             });
         });
 
+        // ===== Detección automática del documento =====
+        // Cada 250 ms se analiza un frame reducido (120x90): se mide la nitidez
+        // (varianza de luminancia) y la estabilidad (diferencia media entre frames
+        // consecutivos). Si el encuadre se mantiene nítido y estable ~1,8 s, el
+        // documento se considera detectado y la foto se toma sola. A los 12 s sin
+        // estabilidad suficiente se captura igual (fallback para la demo).
+        const ANALYZE_MS = 250;
+        const STABLE_MS = 1800;
+        const FALLBACK_MS = 12000;
+        const DIFF_THRESHOLD = 6;   // diferencia media por pixel (0-255): cámara quieta
+        const VARIANCE_MIN = 500;   // varianza de luminancia: hay contenido con texto/bordes
+
+        let analyzeTimer = null;
+        let fallbackTimer = null;
+        let prevFrame = null;
+        let stableSince = null;
+        let autoCaptured = false;
+
         async function startCamera() {
             show('kycCamera');
             document.getElementById('cameraError').textContent = '';
+            resetDetection();
             try {
                 stream = await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: 'environment', width: { ideal: 1280 } },
                     audio: false
                 });
-                document.getElementById('kycVideo').srcObject = stream;
+                const video = document.getElementById('kycVideo');
+                video.srcObject = stream;
+                video.addEventListener('playing', startDetection, { once: true });
             } catch (err) {
                 document.getElementById('cameraError').textContent =
                     'No se pudo acceder a la cámara. Usa la opción de subir foto.';
             }
         }
 
+        function resetDetection() {
+            autoCaptured = false;
+            prevFrame = null;
+            stableSince = null;
+            document.getElementById('kycFrame').classList.remove('detected');
+            const status = document.getElementById('kycStatus');
+            status.classList.remove('detected');
+            status.innerHTML = '<span class="kyc-dot"></span> Buscando documento...';
+            if (analyzeTimer) { clearInterval(analyzeTimer); analyzeTimer = null; }
+            if (fallbackTimer) { clearTimeout(fallbackTimer); fallbackTimer = null; }
+        }
+
+        function startDetection() {
+            analyzeTimer = setInterval(analyzeFrame, ANALYZE_MS);
+            fallbackTimer = setTimeout(() => {
+                if (!autoCaptured) setStatus('Capturando documento...', false);
+                doCapture();
+            }, FALLBACK_MS);
+        }
+
+        function analyzeFrame() {
+            const video = document.getElementById('kycVideo');
+            if (!video.videoWidth || autoCaptured) return;
+
+            const canvas = document.createElement('canvas');
+            canvas.width = 120;
+            canvas.height = 90;
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            ctx.drawImage(video, 0, 0, 120, 90);
+            const pixels = ctx.getImageData(0, 0, 120, 90).data;
+
+            let sum = 0, sumSq = 0, diffSum = 0;
+            const n = pixels.length / 4;
+            for (let i = 0; i < pixels.length; i += 4) {
+                const lum = 0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2];
+                sum += lum;
+                sumSq += lum * lum;
+                if (prevFrame) diffSum += Math.abs(lum - prevFrame[i / 4]);
+            }
+            const mean = sum / n;
+            const variance = sumSq / n - mean * mean;
+            const meanDiff = prevFrame ? diffSum / n : Infinity;
+
+            const current = new Float32Array(n);
+            for (let i = 0, j = 0; i < pixels.length; i += 4, j++) {
+                current[j] = 0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2];
+            }
+            prevFrame = current;
+
+            const sharp = variance >= VARIANCE_MIN;
+            const stable = meanDiff <= DIFF_THRESHOLD;
+
+            if (sharp && stable) {
+                if (!stableSince) stableSince = Date.now();
+                if (Date.now() - stableSince >= STABLE_MS) onDocumentDetected();
+            } else {
+                stableSince = null;
+            }
+        }
+
+        function setStatus(text, detected) {
+            const status = document.getElementById('kycStatus');
+            status.classList.toggle('detected', detected);
+            status.innerHTML = `<span class="kyc-dot"></span> ${text}`;
+        }
+
+        function onDocumentDetected() {
+            if (autoCaptured) return;
+            autoCaptured = true;
+            document.getElementById('kycFrame').classList.add('detected');
+            setStatus('Documento detectado', true);
+
+            // Flash de captura y foto automática
+            const flash = document.getElementById('kycFlash');
+            flash.classList.add('active');
+            setTimeout(() => {
+                flash.classList.remove('active');
+                doCapture();
+            }, 450);
+        }
+
+        function stopDetection() {
+            if (analyzeTimer) { clearInterval(analyzeTimer); analyzeTimer = null; }
+            if (fallbackTimer) { clearTimeout(fallbackTimer); fallbackTimer = null; }
+        }
+
         function stopCamera() {
+            stopDetection();
             if (stream) {
                 stream.getTracks().forEach(t => t.stop());
                 stream = null;
@@ -131,7 +252,8 @@
             cb(canvas.toDataURL('image/jpeg', 0.7));
         }
 
-        document.getElementById('captureBtn').addEventListener('click', () => {
+        function doCapture() {
+            if (capturedImage) return;
             const video = document.getElementById('kycVideo');
             if (!video.videoWidth) {
                 document.getElementById('cameraError').textContent = 'La cámara aún no está lista, intenta de nuevo.';
@@ -143,7 +265,9 @@
                 stopCamera();
                 show('kycPreview');
             });
-        });
+        }
+
+        document.getElementById('captureBtn').addEventListener('click', doCapture);
 
         document.getElementById('fileFallback').addEventListener('change', (e) => {
             const file = e.target.files[0];
