@@ -25,7 +25,7 @@ function seedData() {
     const evaluador = (n, password) => ({
         username: `evaluador${n}`,
         password,
-        name: `Evaluador ${['Uno', 'Dos', 'Tres', 'Cuatro', 'Cinco', 'Seis'][n - 1]}`,
+        name: ['Adriana Umpierrez', 'Bertha Doumat', 'Dafne Cuevas', 'Diana Canal', 'Juan David Guerra', 'Robin Henao'][n - 1],
         balances: { USD: 5000, EUR: 2000, CLP: 1000000, MXN: 10000, COP: 500000, PEN: 500, ARS: 100000, VES: 1000 }
     });
 
@@ -40,7 +40,7 @@ function seedData() {
             {
                 username: 'demo',
                 password: 'demo123',
-                name: 'Cuenta Demo',
+                name: 'Nicolás Sánchez',
                 balances: { USD: 3000, EUR: 1000, CLP: 500000, MXN: 5000, COP: 250000, PEN: 250, ARS: 50000, VES: 500 }
             }
         ],
