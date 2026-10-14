@@ -62,7 +62,7 @@ async function loadSession() {
     document.getElementById('ordWantCurrency').innerHTML = currencyOptions;
 
     // Monedas por defecto: primera con saldo para enviar, CLP para recibir
-    const firstWithBalance = Object.keys(user.balances).find(c => user.balances[c] > 0) || 'USD';
+    const firstWithBalance = Object.keys(user.balances).find(c => user.balances[c] > 0) || 'EUR';
     document.getElementById('fromCurrency').value = firstWithBalance;
     document.getElementById('toCurrency').value = 'CLP';
     document.getElementById('ordGiveCurrency').value = firstWithBalance;

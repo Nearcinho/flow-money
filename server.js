@@ -17,9 +17,9 @@ app.use(express.json({ limit: '2mb' }));
 
 const QRCode = require('qrcode');
 
-// ===== Tasas de cambio (base USD), mismas que la landing =====
+// ===== Tasas de cambio relativas entre las 7 divisas, mismas que la landing =====
 const RATES = {
-    USD: 1, EUR: 0.92, MXN: 17.25, ARS: 875.50,
+    EUR: 0.92, MXN: 17.25, ARS: 875.50,
     COP: 3950.00, CLP: 885.00, PEN: 3.72, VES: 36.50
 };
 
@@ -32,7 +32,7 @@ function seedData() {
         username: `evaluador${n}`,
         password,
         name: ['Adriana Umpierrez', 'Bertha Doumat', 'Dafne Cuevas', 'Diana Canal', 'Juan David Guerra', 'Robin Henao'][n - 1],
-        balances: { USD: 5000, EUR: 2000, CLP: 1000000, MXN: 10000, COP: 500000, PEN: 500, ARS: 100000, VES: 1000 },
+        balances: { EUR: 100, MXN: 1875, COP: 430000, CLP: 96000, PEN: 400, ARS: 95000, VES: 4000 },
         kyc: kycSeed()
     });
 
@@ -48,7 +48,7 @@ function seedData() {
                 username: 'demo',
                 password: 'demo123',
                 name: 'Nicolás Sánchez',
-                balances: { USD: 3000, EUR: 1000, CLP: 500000, MXN: 5000, COP: 250000, PEN: 250, ARS: 50000, VES: 500 },
+                balances: { EUR: 100, MXN: 1875, COP: 430000, CLP: 96000, PEN: 400, ARS: 95000, VES: 4000 },
                 kyc: kycSeed()
             }
         ],
@@ -153,7 +153,7 @@ function publicUser(account) {
 }
 
 function convert(amount, fromCurrency, toCurrency) {
-    // amount en fromCurrency -> equivalente en toCurrency (vía USD)
+    // amount en fromCurrency -> equivalente en toCurrency (tasas relativas)
     return (amount / RATES[fromCurrency]) * RATES[toCurrency];
 }
 
@@ -206,12 +206,12 @@ app.post('/api/logout', (req, res) => {
 
 // Países soportados y su divisa local (las 8 del proyecto)
 const COUNTRIES = {
-    'México': 'MXN', 'Colombia': 'COP', 'Ecuador': 'USD', 'España': 'EUR',
+    'México': 'MXN', 'Colombia': 'COP', 'Ecuador': 'EUR', 'España': 'EUR',
     'Perú': 'PEN', 'Argentina': 'ARS', 'Chile': 'CLP', 'Venezuela': 'VES'
 };
 
-// Saldos de bienvenida simulados
-const WELCOME_BALANCE = { USD: 1000, EUR: 1000, MXN: 20000, COP: 4000000, PEN: 4000, ARS: 900000, CLP: 900000, VES: 36500 };
+// Saldos de bienvenida simulados (~100 EUR equivalentes por divisa)
+const WELCOME_BALANCE = { EUR: 100, MXN: 1875, COP: 430000, CLP: 96000, PEN: 400, ARS: 95000, VES: 4000 };
 
 app.post('/api/register', (req, res) => {
     const { name, email, username, password, country } = req.body || {};
@@ -228,7 +228,7 @@ app.post('/api/register', (req, res) => {
     if (data.accounts.some(a => a.email && a.email === cleanEmail)) return res.status(400).json({ error: 'Ese email ya está registrado' });
 
     const currency = COUNTRIES[country];
-    const balances = { USD: WELCOME_BALANCE.USD, EUR: WELCOME_BALANCE.EUR };
+    const balances = { EUR: WELCOME_BALANCE.EUR };
     balances[currency] = (balances[currency] || 0) + WELCOME_BALANCE[currency];
 
     const kycToken = crypto.randomBytes(16).toString('hex');
@@ -296,7 +296,7 @@ app.get('/api/users', requireAuth, (req, res) => {
 });
 
 app.get('/api/rates', (req, res) => {
-    res.json({ base: 'USD', rates: RATES });
+    res.json({ rates: RATES });
 });
 
 app.get('/api/transactions', requireAuth, (req, res) => {

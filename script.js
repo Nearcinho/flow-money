@@ -9,7 +9,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // ===== Currencies Data =====
     const currencies = [
-        { code: 'USD', name: 'Dólar estadounidense', rate: 1 },
         { code: 'EUR', name: 'Euro', rate: 0.92 },
         { code: 'MXN', name: 'Peso mexicano', rate: 17.25 },
         { code: 'ARS', name: 'Peso argentino', rate: 875.50 },
@@ -20,7 +19,7 @@ document.addEventListener('DOMContentLoaded', function() {
     ];
 
     // Exchange state
-    let sendCurrency = currencies.find(c => c.code === 'USD');
+    let sendCurrency = currencies.find(c => c.code === 'EUR');
     let receiveCurrency = currencies.find(c => c.code === 'MXN');
     let currentSelector = null; // 'send' or 'receive'
 

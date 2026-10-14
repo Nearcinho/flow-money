@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Open+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=8">
+    <link rel="stylesheet" href="styles.css?v=9">
     <link rel="icon" type="image/png" href="flowmoneylogo.png">
 </head>
 <body>
@@ -81,7 +81,7 @@
                             <div class="field-row">
                                 <input type="number" id="sendAmount" value="1000" min="1" placeholder="0.00">
                                 <div class="currency-select" id="sendCurrencyBtn">
-                                    <span class="currency-pill" id="sendFlag">USD</span>
+                                    <span class="currency-pill" id="sendFlag">EUR</span>
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
                                 </div>
                             </div>
@@ -115,7 +115,7 @@
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
                                 <span>Tasa de cambio:</span>
                             </div>
-                            <span class="rate-value" id="exchangeRate">1 USD = 17.25 MXN</span>
+                            <span class="rate-value" id="exchangeRate">1 EUR = 18.75 MXN</span>
                         </div>
 
                         <!-- Detalles -->
@@ -184,8 +184,8 @@
                                 </div>
                             </div>
                             <div class="offer-details">
-                                <span class="offer-rate">100 USD → 1.725 MXN</span>
-                                <span class="offer-limit">Tasa: 1 USD = 17,25 MXN</span>
+                                <span class="offer-rate">100 EUR → 1.875 MXN</span>
+                                <span class="offer-limit">Tasa: 1 EUR = 18,75 MXN</span>
                             </div>
                             <span class="offer-time">~3 min</span>
                         </div>
@@ -220,8 +220,8 @@
                                 </div>
                             </div>
                             <div class="offer-details">
-                                <span class="offer-rate">200 USD → 177.000 CLP</span>
-                                <span class="offer-limit">Tasa: 1 USD = 885 CLP</span>
+                                <span class="offer-rate">96.000 CLP → 1.871,19 MXN</span>
+                                <span class="offer-limit">Tasa: 1 CLP = 0,0195 MXN</span>
                             </div>
                             <span class="offer-time">~2 min</span>
                         </div>
@@ -270,14 +270,14 @@
                 <div class="modal-summary">
                     <div class="summary-row">
                         <span>Envías</span>
-                        <strong id="modalSent">1,000.00 USD</strong>
+                        <strong id="modalSent">1,000.00 EUR</strong>
                     </div>
                     <div class="summary-arrow">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
                     </div>
                     <div class="summary-row">
                         <span>Recibes</span>
-                        <strong id="modalReceived" class="highlight">17,250.00 MXN</strong>
+                        <strong id="modalReceived" class="highlight">18,750.00 MXN</strong>
                     </div>
                 </div>
             </div>
@@ -591,6 +591,6 @@
         </div>
     </footer>
 
-    <script src="script.js?v=8"></script>
+    <script src="script.js?v=9"></script>
 </body>
 </html>

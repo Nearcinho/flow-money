@@ -36,15 +36,15 @@ Red LAN:  http://192.168.x.x:3000   <- abrir esto en el otro notebook
 
 ## Cuentas de demostración
 
-| Usuario    | Contraseña | Saldos iniciales |
-|------------|------------|------------------|
-| evaluador1 | flow101    | 5.000 USD · 2.000 EUR · 1.000.000 CLP · 10.000 MXN |
-| evaluador2 | flow102    | 5.000 USD · 2.000 EUR · 1.000.000 CLP · 10.000 MXN |
-| evaluador3 | flow103    | 5.000 USD · 2.000 EUR · 1.000.000 CLP · 10.000 MXN |
-| evaluador4 | flow104    | 5.000 USD · 2.000 EUR · 1.000.000 CLP · 10.000 MXN |
-| evaluador5 | flow105    | 5.000 USD · 2.000 EUR · 1.000.000 CLP · 10.000 MXN |
-| evaluador6 | flow106    | 5.000 USD · 2.000 EUR · 1.000.000 CLP · 10.000 MXN |
-| demo       | demo123    | 3.000 USD · 1.000 EUR · 500.000 CLP · 5.000 MXN |
+| Usuario    | Contraseña | Saldos iniciales (~100 EUR por divisa) |
+|------------|------------|----------------------------------------|
+| evaluador1 | flow101    | 100 EUR · 1.875 MXN · 430.000 COP · 96.000 CLP · 400 PEN · 95.000 ARS · 4.000 VES |
+| evaluador2 | flow102    | 100 EUR · 1.875 MXN · 430.000 COP · 96.000 CLP · 400 PEN · 95.000 ARS · 4.000 VES |
+| evaluador3 | flow103    | 100 EUR · 1.875 MXN · 430.000 COP · 96.000 CLP · 400 PEN · 95.000 ARS · 4.000 VES |
+| evaluador4 | flow104    | 100 EUR · 1.875 MXN · 430.000 COP · 96.000 CLP · 400 PEN · 95.000 ARS · 4.000 VES |
+| evaluador5 | flow105    | 100 EUR · 1.875 MXN · 430.000 COP · 96.000 CLP · 400 PEN · 95.000 ARS · 4.000 VES |
+| evaluador6 | flow106    | 100 EUR · 1.875 MXN · 430.000 COP · 96.000 CLP · 400 PEN · 95.000 ARS · 4.000 VES |
+| demo       | demo123    | 100 EUR · 1.875 MXN · 430.000 COP · 96.000 CLP · 400 PEN · 95.000 ARS · 4.000 VES |
 
 ## Versión online (GitHub Pages + Render)
 
@@ -87,7 +87,7 @@ Red LAN:  http://192.168.x.x:3000   <- abrir esto en el otro notebook
 
 ## Notas
 
-- Las tasas de cambio son fijas (base USD) y están en `server.js` (`RATES`).
+- Las tasas de cambio son fijas (7 divisas, valores relativos) y están en `server.js` (`RATES`).
 - El botón "Reiniciar demo" del dashboard restaura saldos y borra el historial.
 - Es un simulador: las contraseñas se guardan en texto plano en `data.json`,
   no usar con datos reales.
