@@ -501,15 +501,6 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
     window.location.href = 'login.html';
 });
 
-document.getElementById('resetBtn').addEventListener('click', async () => {
-    if (!confirm('¿Reiniciar todos los saldos y el historial?')) return;
-    await fetch('/api/reset', { method: 'POST' });
-    state.firstLoad = true;
-    await loadSession();
-    await loadTransactions();
-    showToast('Demo reiniciada: saldos y historial restaurados');
-});
-
 // ===== Inicio =====
 (async () => {
     try {
