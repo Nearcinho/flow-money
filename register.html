@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="app.css?v=9">
+    <link rel="stylesheet" href="app.css?v=13">
     <link rel="icon" type="image/png" href="flowmoneylogo.png">
 </head>
 <body class="auth-body">
@@ -57,7 +57,7 @@
                 <button type="submit" class="btn-primary-full" id="registerBtn">Crear cuenta</button>
             </form>
 
-            <p class="auth-back-wrap">¿Ya tienes cuenta? <a href="login.html" class="auth-link">Inicia sesión</a></p>
+            <p class="auth-back-wrap">¿Ya tienes cuenta? <a href="login.html" class="auth-link" id="loginLink">Inicia sesión</a></p>
         </div>
 
         <!-- Paso 2: verificación de identidad (KYC) con QR -->
@@ -87,6 +87,16 @@
     </div>
 
     <script>
+        // Preservar ?next=exchange hacia login y redirigir si ya hay sesión
+        if (new URLSearchParams(window.location.search).get('next') === 'exchange') {
+            document.getElementById('loginLink').href = 'login.html?next=exchange';
+        }
+
+        fetch('/api/me')
+            .then(res => res.ok ? res.json() : null)
+            .then(json => { if (json && json.user) window.location.href = 'app.html'; })
+            .catch(() => { /* sin sesión: se muestra el registro */ });
+
         const stepRegister = document.getElementById('stepRegister');
         const stepKyc = document.getElementById('stepKyc');
         const stepDone = document.getElementById('stepDone');

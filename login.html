@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="app.css?v=9">
+    <link rel="stylesheet" href="app.css?v=13">
     <link rel="icon" type="image/png" href="flowmoneylogo.png">
 </head>
 <body class="auth-body">
@@ -36,6 +36,8 @@
             <p>evaluador1…evaluador6 &nbsp;·&nbsp; contraseñas flow101…flow106</p>
         </div>
 
+        <p class="auth-back-wrap">¿No tienes cuenta? <a href="register.html" class="auth-link" id="registerLink">Crear cuenta</a></p>
+
         <a href="index.html" class="auth-back">← Volver al inicio</a>
     </div>
 
@@ -44,11 +46,20 @@
         const errorBox = document.getElementById('loginError');
         const loginBtn = document.getElementById('loginBtn');
 
+        const nextParam = new URLSearchParams(window.location.search).get('next');
+
         // Si viene de "Iniciar intercambio" en la landing, explicar por qué pedimos sesión
-        if (new URLSearchParams(window.location.search).get('next') === 'exchange') {
+        if (nextParam === 'exchange') {
             document.getElementById('authSubtitle').textContent =
                 'Inicia sesión para completar el intercambio que preparaste';
+            document.getElementById('registerLink').href = 'register.html?next=exchange';
         }
+
+        // Con sesión activa no tiene sentido pedir login: directo al dashboard
+        fetch('/api/me')
+            .then(res => res.ok ? res.json() : null)
+            .then(json => { if (json && json.user) window.location.href = 'app.html'; })
+            .catch(() => { /* sin sesión o sin servidor: se muestra el formulario */ });
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();

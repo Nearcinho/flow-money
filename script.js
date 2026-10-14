@@ -112,9 +112,10 @@ document.addEventListener('DOMContentLoaded', function() {
             if (json && json.user) {
                 sessionUser = json.user;
                 if (navCta) {
-                    navCta.textContent = 'Mi cuenta';
+                    navCta.textContent = 'Ir a mi cuenta';
                     navCta.setAttribute('href', 'app.html');
                 }
+                // Con sesión activa, "Crear cuenta" no aplica; el navbar nunca queda vacío
                 const navRegister = document.querySelector('.nav-cta-register');
                 if (navRegister) navRegister.style.display = 'none';
             }
