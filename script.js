@@ -366,68 +366,6 @@ document.addEventListener('DOMContentLoaded', function() {
         </style>
     `);
 
-    // ===== Stats counter animation =====
-    const statsSection = document.querySelector('.hero-stats');
-    let statsAnimated = false;
-
-    function animateStats() {
-        if (statsAnimated) return;
-
-        const stats = document.querySelectorAll('.stat-number');
-
-        stats.forEach(stat => {
-            const text = stat.textContent;
-            const hasPlus = text.includes('+');
-            const hasM = text.includes('M');
-            const hasK = text.includes('K');
-
-            let finalValue = parseFloat(text.replace(/[^0-9.]/g, ''));
-            let suffix = '';
-
-            if (hasPlus) suffix += '+';
-            if (hasM) suffix = 'M' + suffix;
-            if (hasK) suffix = 'K' + suffix;
-
-            let currentValue = 0;
-            const increment = finalValue / 50;
-            const duration = 2000;
-            const stepTime = duration / 50;
-
-            const counter = setInterval(() => {
-                currentValue += increment;
-
-                if (currentValue >= finalValue) {
-                    currentValue = finalValue;
-                    clearInterval(counter);
-                }
-
-                if (text.includes('$')) {
-                    stat.textContent = '$' + Math.floor(currentValue) + 'M+';
-                } else if (hasK) {
-                    stat.textContent = Math.floor(currentValue) + 'K+';
-                } else {
-                    stat.textContent = Math.floor(currentValue) + '+';
-                }
-            }, stepTime);
-        });
-
-        statsAnimated = true;
-    }
-
-    // Trigger stats animation when hero is visible
-    const heroObserver = new IntersectionObserver(function(entries) {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                setTimeout(animateStats, 500);
-                heroObserver.unobserve(entry.target);
-            }
-        });
-    }, { threshold: 0.5 });
-
-    if (statsSection) {
-        heroObserver.observe(statsSection);
-    }
-
     // ===== Active nav link on scroll =====
     const sections = document.querySelectorAll('section[id]');
 
