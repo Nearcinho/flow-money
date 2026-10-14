@@ -267,6 +267,88 @@ body {
     margin-bottom: 0.5rem;
 }
 
+/* Mercado P2P */
+.panel-wide { grid-column: 1 / -1; }
+
+.p2p-form { margin-bottom: 1.5rem; }
+
+.p2p-lists {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+.p2p-column h3 {
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+    color: #5a6b7c;
+}
+
+.order-list { display: flex; flex-direction: column; gap: 0.75rem; }
+
+.order-item {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.85rem 1rem;
+    border-radius: var(--radius-sm);
+    background: #f8fbfc;
+    border-left: 4px solid var(--turquoise);
+}
+
+.order-item.order-completed { border-left-color: #1a9e5c; }
+.order-item.order-cancelled { border-left-color: var(--gray-light); opacity: 0.7; }
+
+.order-details { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.order-details strong { font-size: 0.95rem; }
+.order-sub { font-size: 0.8rem; color: #5a6b7c; }
+
+.order-badge {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    background: var(--turquoise-light);
+    color: var(--turquoise-dark);
+    margin-top: 0.25rem;
+    width: fit-content;
+}
+
+.order-badge.badge-escrow { background: #fff4e0; color: #b06414; }
+.order-badge.badge-done { background: #e2f6ec; color: #1a9e5c; }
+.order-badge.badge-cancelled { background: var(--gray-light); color: #5a6b7c; }
+
+.btn-accept {
+    background: var(--turquoise);
+    color: var(--white);
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 0.55rem 1rem;
+    font-family: var(--font-primary);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.2s ease;
+}
+
+.btn-accept:hover { background: var(--turquoise-dark); }
+
+.btn-cancel-order {
+    background: transparent;
+    border: 1.5px solid #d64545;
+    color: #d64545;
+    border-radius: var(--radius-sm);
+    padding: 0.5rem 0.9rem;
+    font-family: var(--font-primary);
+    font-size: 0.82rem;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.btn-cancel-order:hover { background: rgba(214, 69, 69, 0.08); }
+
 /* Historial */
 .tx-list { display: flex; flex-direction: column; gap: 0.75rem; }
 
@@ -328,6 +410,7 @@ body {
 /* Responsive */
 @media (max-width: 800px) {
     .app-main { grid-template-columns: 1fr; }
+    .p2p-lists { grid-template-columns: 1fr; }
     .transfer-currencies { grid-template-columns: 1fr; }
     .transfer-arrow { padding-top: 0; justify-content: center; transform: rotate(90deg); }
 }

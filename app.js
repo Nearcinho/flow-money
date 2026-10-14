@@ -1,9 +1,8 @@
 // ===== Flow Money - Lógica del dashboard =====
 
 const FLAGS = {
-    USD: '🇺🇸', EUR: '🇪🇺', MXN: '🇲🇽', ARS: '🇦🇷', COP: '🇨🇴', CLP: '🇨🇱',
-    PEN: '🇵🇪', BRL: '🇧🇷', VES: '🇻🇪', UYU: '🇺🇾', PYG: '🇵🇾', BOB: '🇧🇴',
-    PAB: '🇵🇦', CRC: '🇨🇷', DOP: '🇩🇴', GBP: '🇬🇧'
+    USD: '🇺🇸', EUR: '🇪🇺', MXN: '🇲🇽', ARS: '🇦🇷',
+    COP: '🇨🇴', CLP: '🇨🇱', PEN: '🇵🇪', VES: '🇻🇪'
 };
 
 const state = {
@@ -65,6 +64,8 @@ async function loadSession() {
     document.getElementById('toCurrency').innerHTML = currencyOptions;
     document.getElementById('exFromCurrency').innerHTML = currencyOptions;
     document.getElementById('exToCurrency').innerHTML = currencyOptions;
+    document.getElementById('ordGiveCurrency').innerHTML = currencyOptions;
+    document.getElementById('ordWantCurrency').innerHTML = currencyOptions;
 
     // Monedas por defecto: primera con saldo para enviar, CLP para recibir
     const firstWithBalance = Object.keys(user.balances).find(c => user.balances[c] > 0) || 'USD';
@@ -72,11 +73,14 @@ async function loadSession() {
     document.getElementById('toCurrency').value = 'CLP';
     document.getElementById('exFromCurrency').value = firstWithBalance;
     document.getElementById('exToCurrency').value = 'CLP';
+    document.getElementById('ordGiveCurrency').value = firstWithBalance;
+    document.getElementById('ordWantCurrency').value = 'CLP';
 
     applyPendingExchange();
     renderBalances();
     updateConversion();
     updateExchangeConversion();
+    updateOrderConversion();
 }
 
 // Si el usuario viene de la landing con un intercambio pendiente, pre-llenar el formulario
@@ -155,6 +159,155 @@ function updateExchangeConversion() {
     document.getElementById('exFromHint').textContent = `Disponible: ${fmt(balance, from)}`;
 }
 
+// ===== Mercado P2P =====
+function updateOrderConversion() {
+    const amount = parseFloat(document.getElementById('ordAmount').value) || 0;
+    const give = document.getElementById('ordGiveCurrency').value;
+    const want = document.getElementById('ordWantCurrency').value;
+
+    if (!state.rates || !give || !want || !state.user) return;
+
+    const market = amount * (state.rates[want] / state.rates[give]);
+    const net = market * (1 - 0.0075);
+    const balance = state.user.balances[give] || 0;
+
+    document.getElementById('ordReceive').value = net
+        ? net.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        : '';
+    document.getElementById('ordRateHint').textContent =
+        `Al cambio del día, menos la comisión del 0,75 %. Quien acepte pagará ${market ? market.toLocaleString('es-CL', { maximumFractionDigits: 2 }) : '0'} ${want}`;
+    document.getElementById('ordGiveHint').textContent = `Disponible: ${fmt(balance, give)} (quedará en custodia escrow)`;
+}
+
+function orderBadge(o) {
+    if (o.status === 'open') return '<span class="order-badge badge-escrow">🔒 Fondos en custodia escrow</span>';
+    if (o.status === 'completed') return '<span class="order-badge badge-done">✓ Completada</span>';
+    return '<span class="order-badge badge-cancelled">Cancelada</span>';
+}
+
+async function loadOrders() {
+    const { open, mine } = await api('/api/orders');
+
+    const openList = document.getElementById('openOrders');
+    if (!open.length) {
+        openList.innerHTML = '<p class="tx-empty">No hay ofertas abiertas de otros usuarios</p>';
+    } else {
+        openList.innerHTML = open.map(o => `
+            <div class="order-item" data-order="${o.id}">
+                <div class="order-details">
+                    <strong>${o.makerName} entrega ${fmt(o.giveAmount, o.giveCurrency)}</strong>
+                    <span class="order-sub">Tú pagas ${fmt(o.takerPay, o.wantCurrency)} y recibes ${fmt(o.takerReceive, o.giveCurrency)}</span>
+                    ${orderBadge(o)}
+                </div>
+                <button class="btn-accept" data-accept="${o.id}">Aceptar</button>
+            </div>
+        `).join('');
+    }
+
+    const myList = document.getElementById('myOrders');
+    if (!mine.length) {
+        myList.innerHTML = '<p class="tx-empty">Aún no has publicado ni aceptado ofertas</p>';
+    } else {
+        myList.innerHTML = mine.map(o => {
+            const isMaker = o.maker === state.user.username;
+            const title = isMaker
+                ? `Ofreces ${fmt(o.giveAmount, o.giveCurrency)} por ${o.wantCurrency}`
+                : `Aceptaste la oferta de ${o.makerName}`;
+            const sub = o.status === 'completed'
+                ? (isMaker
+                    ? `Recibiste ${fmt(o.makerReceive, o.wantCurrency)} de ${o.takerName}`
+                    : `Pagaste ${fmt(o.takerPay, o.wantCurrency)} y recibiste ${fmt(o.takerReceive, o.giveCurrency)}`)
+                : `Recibirás ${fmt(o.makerReceive, o.wantCurrency)} al completarse`;
+            const cancelBtn = (isMaker && o.status === 'open')
+                ? `<button class="btn-cancel-order" data-cancel="${o.id}">Cancelar</button>`
+                : '';
+            return `
+                <div class="order-item order-${o.status}" data-order="${o.id}">
+                    <div class="order-details">
+                        <strong>${title}</strong>
+                        <span class="order-sub">${sub}</span>
+                        ${orderBadge(o)}
+                    </div>
+                    ${cancelBtn}
+                </div>
+            `;
+        }).join('');
+    }
+}
+
+document.getElementById('ordAmount').addEventListener('input', updateOrderConversion);
+document.getElementById('ordGiveCurrency').addEventListener('change', updateOrderConversion);
+document.getElementById('ordWantCurrency').addEventListener('change', updateOrderConversion);
+
+document.getElementById('orderForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errorBox = document.getElementById('ordError');
+    const successBox = document.getElementById('ordSuccess');
+    const btn = document.getElementById('ordBtn');
+    errorBox.textContent = '';
+    successBox.textContent = '';
+    btn.disabled = true;
+
+    try {
+        const res = await fetch('/api/orders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                giveCurrency: document.getElementById('ordGiveCurrency').value,
+                wantCurrency: document.getElementById('ordWantCurrency').value,
+                amount: parseFloat(document.getElementById('ordAmount').value)
+            })
+        });
+        const json = await res.json();
+
+        if (!res.ok) {
+            errorBox.textContent = json.error || 'Error al publicar la oferta';
+        } else {
+            const o = json.order;
+            successBox.textContent = `✓ Oferta publicada: ${fmt(o.giveAmount, o.giveCurrency)} en custodia escrow, esperando contraparte`;
+            document.getElementById('ordAmount').value = '';
+            state.user.balances = json.balances;
+            renderBalances();
+            updateOrderConversion();
+            await loadOrders();
+        }
+    } catch (err) {
+        errorBox.textContent = 'No se pudo conectar con el servidor';
+    } finally {
+        btn.disabled = false;
+    }
+});
+
+// Delegación: botones Aceptar / Cancelar de las listas de órdenes
+document.getElementById('p2pPanel').addEventListener('click', async (e) => {
+    const acceptId = e.target.dataset && e.target.dataset.accept;
+    const cancelId = e.target.dataset && e.target.dataset.cancel;
+    if (!acceptId && !cancelId) return;
+
+    const url = acceptId ? `/api/orders/${acceptId}/accept` : `/api/orders/${cancelId}/cancel`;
+    try {
+        const res = await fetch(url, { method: 'POST' });
+        const json = await res.json();
+
+        if (!res.ok) {
+            showToast(`⚠️ ${json.error || 'No se pudo completar la operación'}`);
+        } else {
+            if (acceptId) {
+                const o = json.order;
+                showToast(`✓ Intercambio completado: pagaste ${fmt(o.takerPay, o.wantCurrency)} y recibiste ${fmt(o.takerReceive, o.giveCurrency)}`);
+            } else {
+                showToast('Oferta cancelada: el escrow devolvió tus fondos');
+            }
+            state.user.balances = json.balances;
+            renderBalances();
+            updateOrderConversion();
+            await Promise.all([loadOrders(), loadTransactions()]);
+        }
+    } catch (err) {
+        showToast('⚠️ No se pudo conectar con el servidor');
+    }
+});
+
 async function loadTransactions() {
     const { transactions } = await api('/api/transactions');
     const list = document.getElementById('txList');
@@ -170,21 +323,31 @@ async function loadTransactions() {
     if (!state.firstLoad && state.lastTxId && newest.id !== state.lastTxId) {
         const incoming = transactions.filter(t => t.type !== 'exchange' && t.to === state.user.username &&
             (!state.lastTxId || !document.querySelector(`[data-tx="${t.id}"]`)));
-        incoming.forEach(t => showToast(`💸 Recibiste ${fmt(t.amountReceived, t.currencyReceived)} de ${t.fromName}`));
+        incoming.forEach(t => showToast(t.type === 'p2p'
+            ? `🔒✓ Intercambio P2P completado: recibiste ${fmt(t.amountReceived, t.currencyReceived)} de ${t.fromName}`
+            : `💸 Recibiste ${fmt(t.amountReceived, t.currencyReceived)} de ${t.fromName}`));
     }
     state.lastTxId = newest.id;
     state.firstLoad = false;
 
     list.innerHTML = transactions.map(t => {
         const isExchange = t.type === 'exchange';
+        const isP2p = t.type === 'p2p';
         const isOutgoing = !isExchange && t.from === state.user.username;
         const date = new Date(t.date).toLocaleString('es-CL');
-        const title = isExchange
-            ? 'Intercambio de divisas'
-            : (isOutgoing ? `Enviado a ${t.toName}` : `Recibido de ${t.fromName}`);
-        const icon = isExchange ? '⇄' : (isOutgoing ? '↗' : '↙');
+        let title, icon, cssClass;
+        if (isExchange) {
+            title = 'Intercambio de divisas'; icon = '⇄'; cssClass = 'tx-exchange';
+        } else if (isP2p) {
+            const other = isOutgoing ? t.toName : t.fromName;
+            title = `Intercambio P2P con ${other}`; icon = '⇄'; cssClass = 'tx-exchange';
+        } else {
+            title = isOutgoing ? `Enviado a ${t.toName}` : `Recibido de ${t.fromName}`;
+            icon = isOutgoing ? '↗' : '↙';
+            cssClass = isOutgoing ? 'tx-out' : 'tx-in';
+        }
         return `
-            <div class="tx-item ${isExchange ? 'tx-exchange' : (isOutgoing ? 'tx-out' : 'tx-in')}" data-tx="${t.id}">
+            <div class="tx-item ${cssClass}" data-tx="${t.id}">
                 <div class="tx-icon">${icon}</div>
                 <div class="tx-details">
                     <strong>${title}</strong>
@@ -208,7 +371,7 @@ async function refreshBalances() {
 // ===== Polling: mantiene ambos notebooks sincronizados =====
 async function poll() {
     try {
-        await Promise.all([refreshBalances(), loadTransactions()]);
+        await Promise.all([refreshBalances(), loadTransactions(), loadOrders()]);
     } catch (e) {
         // errores de red puntuales: se reintenta en el próximo ciclo
     }
@@ -320,7 +483,7 @@ document.getElementById('resetBtn').addEventListener('click', async () => {
 (async () => {
     try {
         await loadSession();
-        await loadTransactions();
+        await Promise.all([loadTransactions(), loadOrders()]);
         setInterval(poll, 3000);
     } catch (e) {
         // la redirección a login ya la maneja api()

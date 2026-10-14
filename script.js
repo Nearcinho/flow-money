@@ -16,15 +16,7 @@ document.addEventListener('DOMContentLoaded', function() {
         { code: 'COP', name: 'Peso colombiano', flag: '🇨🇴', rate: 3950.00 },
         { code: 'CLP', name: 'Peso chileno', flag: '🇨🇱', rate: 885.00 },
         { code: 'PEN', name: 'Sol peruano', flag: '🇵🇪', rate: 3.72 },
-        { code: 'BRL', name: 'Real brasileño', flag: '🇧🇷', rate: 4.97 },
-        { code: 'VES', name: 'Bolívar venezolano', flag: '🇻🇪', rate: 36.50 },
-        { code: 'UYU', name: 'Peso uruguayo', flag: '🇺🇾', rate: 39.25 },
-        { code: 'PYG', name: 'Guaraní paraguayo', flag: '🇵🇾', rate: 7350.00 },
-        { code: 'BOB', name: 'Boliviano', flag: '🇧🇴', rate: 6.91 },
-        { code: 'PAB', name: 'Balboa panameño', flag: '🇵🇦', rate: 1.00 },
-        { code: 'CRC', name: 'Colón costarricense', flag: '🇨🇷', rate: 525.00 },
-        { code: 'DOP', name: 'Peso dominicano', flag: '🇩🇴', rate: 58.50 },
-        { code: 'GBP', name: 'Libra esterlina', flag: '🇬🇧', rate: 0.79 }
+        { code: 'VES', name: 'Bolívar venezolano', flag: '🇻🇪', rate: 36.50 }
     ];
 
     // Exchange state
