@@ -1011,3 +1011,13 @@ body {
     letter-spacing: 0.06em;
     text-transform: uppercase;
 }
+
+/* Acciones de órdenes P2P (varios botones) */
+.order-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    flex-shrink: 0;
+}
+
+.order-item.order-awaiting { border-left-color: #e8a13c; }

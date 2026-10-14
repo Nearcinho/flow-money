@@ -4,7 +4,9 @@ const state = {
     user: null,
     rates: null,
     lastTxId: null,
-    firstLoad: true
+    firstLoad: true,
+    orderStatus: {},
+    escrow: null
 };
 
 // ===== Utilidades =====
@@ -177,11 +179,13 @@ function updateOrderConversion() {
         : '';
     document.getElementById('ordRateHint').textContent =
         `Al cambio del día, menos la comisión del 0,75 %. Quien acepte pagará ${market ? market.toLocaleString('es-CL', { maximumFractionDigits: 2 }) : '0'} ${want}`;
-    document.getElementById('ordGiveHint').textContent = `Disponible: ${fmt(balance, give)} (quedará en custodia escrow)`;
+    document.getElementById('ordGiveHint').textContent = `Disponible: ${fmt(balance, give)} (lo depositarás en el escrow del custodio)`;
 }
 
 function orderBadge(o) {
-    if (o.status === 'open') return '<span class="order-badge badge-escrow">Fondos en custodia escrow</span>';
+    if (o.status === 'awaiting_deposit') return '<span class="order-badge badge-escrow">Esperando depósito al escrow</span>';
+    if (o.status === 'open') return '<span class="order-badge badge-escrow">En escrow · custodia Mangopay</span>';
+    if (o.status === 'awaiting_taker') return '<span class="order-badge badge-escrow">Esperando depósito de la contraparte</span>';
     if (o.status === 'completed') return '<span class="order-badge badge-done">Completada</span>';
     return '<span class="order-badge badge-cancelled">Cancelada</span>';
 }
@@ -189,6 +193,15 @@ function orderBadge(o) {
 // Sello AML: la orden (y sus transacciones) llevan el origen de fondos declarado
 function amlBadge(hasOrigin) {
     return hasOrigin ? '<span class="order-badge badge-aml">AML · Origen declarado</span>' : '';
+}
+
+// Instrucciones de depósito a la cuenta escrow segregada del custodio
+function escrowInstructions(o) {
+    const isMaker = o.maker === state.user.username;
+    const amount = isMaker ? fmt(o.giveAmount, o.giveCurrency) : fmt(o.takerPay, o.wantCurrency);
+    const ref = isMaker ? o.escrowRef : o.takerEscrowRef;
+    const bank = state.escrow || {};
+    return `Transfiere ${amount} a ${bank.holder || 'la entidad custodia'} (IBAN ${bank.iban || ''}) con la referencia ${ref}`;
 }
 
 // ===== KYC: badge de identidad en el header =====
@@ -218,7 +231,18 @@ function renderKycBadge() {
 }
 
 async function loadOrders() {
-    const { open, mine } = await api('/api/orders');
+    const { open, mine, escrow } = await api('/api/orders');
+    if (escrow) state.escrow = escrow;
+
+    // Toasts de transición de estado en mis operaciones (depósitos verificados, liberación)
+    (mine || []).forEach(o => {
+        const prev = state.orderStatus[o.id];
+        if (prev && prev !== o.status) {
+            if (o.status === 'open') showToast('Depósito verificado por el custodio: tu oferta ya está visible en el mercado');
+            if (o.status === 'completed') showToast('Fondos liberados por el custodio: intercambio completado');
+        }
+        state.orderStatus[o.id] = o.status;
+    });
 
     const openList = document.getElementById('openOrders');
     if (!open.length) {
@@ -245,22 +269,47 @@ async function loadOrders() {
             const title = isMaker
                 ? `Ofreces ${fmt(o.giveAmount, o.giveCurrency)} por ${o.wantCurrency}`
                 : `Aceptaste la oferta de ${o.makerName}`;
-            const sub = o.status === 'completed'
-                ? (isMaker
+
+            let sub;
+            if (o.status === 'completed') {
+                sub = isMaker
                     ? `Recibiste ${fmt(o.makerReceive, o.wantCurrency)} de ${o.takerName}`
-                    : `Pagaste ${fmt(o.takerPay, o.wantCurrency)} y recibiste ${fmt(o.takerReceive, o.giveCurrency)}`)
-                : `Recibirás ${fmt(o.makerReceive, o.wantCurrency)} al completarse`;
-            const cancelBtn = (isMaker && o.status === 'open')
-                ? `<button class="btn-cancel-order" data-cancel="${o.id}">Cancelar</button>`
-                : '';
+                    : `Pagaste ${fmt(o.takerPay, o.wantCurrency)} y recibiste ${fmt(o.takerReceive, o.giveCurrency)}`;
+            } else if (o.status === 'awaiting_deposit' && o.makerDeposit === 'pending') {
+                sub = escrowInstructions(o);
+            } else if (o.status === 'awaiting_deposit' && o.makerDeposit === 'sent') {
+                sub = 'Depósito enviado: el custodio lo está verificando';
+            } else if (o.status === 'open') {
+                sub = `Tu dinero está en la cuenta escrow de Mangopay. Recibirás ${fmt(o.makerReceive, o.wantCurrency)} al completarse`;
+            } else if (o.status === 'awaiting_taker' && !isMaker && o.takerDeposit === 'pending') {
+                sub = escrowInstructions(o);
+            } else if (o.status === 'awaiting_taker' && !isMaker && o.takerDeposit === 'sent') {
+                sub = 'Depósito enviado: cuando el custodio lo verifique se liberan los fondos';
+            } else if (o.status === 'awaiting_taker') {
+                sub = `Emparejada con ${o.takerName}: esperando su depósito al escrow`;
+            } else {
+                sub = 'Operación cancelada';
+            }
+
+            // Botones según lo que le toca hacer al usuario
+            let actions = '';
+            const owesDeposit = (isMaker && o.status === 'awaiting_deposit' && o.makerDeposit === 'pending')
+                || (!isMaker && o.status === 'awaiting_taker' && o.takerDeposit === 'pending');
+            if (owesDeposit) {
+                actions += `<button class="btn-accept" data-deposit="${o.id}">Ya realicé la transferencia</button>`;
+            }
+            if (isMaker && ['awaiting_deposit', 'open', 'awaiting_taker'].includes(o.status)) {
+                actions += `<button class="btn-cancel-order" data-cancel="${o.id}">Cancelar</button>`;
+            }
+
             return `
-                <div class="order-item order-${o.status}" data-order="${o.id}">
+                <div class="order-item order-${o.status === 'open' || o.status === 'awaiting_taker' || o.status === 'awaiting_deposit' ? 'awaiting' : o.status}" data-order="${o.id}">
                     <div class="order-details">
                         <strong>${title}</strong>
                         <span class="order-sub">${sub}</span>
                         ${orderBadge(o)} ${amlBadge(o.fundOrigin)}
                     </div>
-                    ${cancelBtn}
+                    <div class="order-actions">${actions}</div>
                 </div>
             `;
         }).join('');
@@ -339,10 +388,9 @@ document.getElementById('amlConfirm').addEventListener('click', async () => {
         } else {
             const o = json.order;
             document.getElementById('amlModal').hidden = true;
-            successBox.textContent = `Oferta publicada: ${fmt(o.giveAmount, o.giveCurrency)} en custodia escrow, esperando contraparte`;
+            if (json.escrow) state.escrow = json.escrow;
+            successBox.textContent = `Oferta creada. Para activarla: ${escrowInstructions(o)}. Los fondos los custodia Mangopay S.A., nunca Flow Money.`;
             document.getElementById('ordAmount').value = '';
-            state.user.balances = json.balances;
-            renderBalances();
             updateOrderConversion();
             await loadOrders();
         }
@@ -355,13 +403,16 @@ document.getElementById('amlConfirm').addEventListener('click', async () => {
     }
 });
 
-// Delegación: botones Aceptar / Cancelar de las listas de órdenes
+// Delegación: botones Aceptar / Cancelar / Ya realicé la transferencia
 document.getElementById('p2pPanel').addEventListener('click', async (e) => {
     const acceptId = e.target.dataset && e.target.dataset.accept;
     const cancelId = e.target.dataset && e.target.dataset.cancel;
-    if (!acceptId && !cancelId) return;
+    const depositId = e.target.dataset && e.target.dataset.deposit;
+    if (!acceptId && !cancelId && !depositId) return;
 
-    const url = acceptId ? `/api/orders/${acceptId}/accept` : `/api/orders/${cancelId}/cancel`;
+    const url = acceptId ? `/api/orders/${acceptId}/accept`
+        : cancelId ? `/api/orders/${cancelId}/cancel`
+        : `/api/orders/${depositId}/deposit`;
     try {
         const res = await fetch(url, { method: 'POST' });
         const json = await res.json();
@@ -371,12 +422,19 @@ document.getElementById('p2pPanel').addEventListener('click', async (e) => {
         } else {
             if (acceptId) {
                 const o = json.order;
-                showToast(`Intercambio completado: pagaste ${fmt(o.takerPay, o.wantCurrency)} y recibiste ${fmt(o.takerReceive, o.giveCurrency)}`);
+                if (json.escrow) state.escrow = json.escrow;
+                showToast(`Oferta aceptada. Para completarla: ${escrowInstructions(o)}`);
+            } else if (depositId) {
+                showToast('Transferencia registrada: el custodio está verificando tu depósito');
             } else {
-                showToast('Oferta cancelada: el escrow devolvió tus fondos');
+                showToast(json.refunded
+                    ? 'Oferta cancelada: el custodio devolvió íntegramente tus fondos del escrow'
+                    : 'Oferta cancelada sin coste: nunca llegaste a depositar');
             }
-            state.user.balances = json.balances;
-            renderBalances();
+            if (json.balances) {
+                state.user.balances = json.balances;
+                renderBalances();
+            }
             updateOrderConversion();
             await Promise.all([loadOrders(), loadTransactions()]);
         }

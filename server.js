@@ -230,26 +230,6 @@ function convert(amount, fromCurrency, toCurrency) {
 // Comisión de la plataforma: 0,75 % por usuario (1,5 % por operación)
 const FEE = 0.0075;
 
-function publicOrder(order) {
-    return {
-        id: order.id,
-        status: order.status,
-        maker: order.maker,
-        makerName: order.makerName,
-        giveAmount: order.giveAmount,
-        giveCurrency: order.giveCurrency,
-        wantCurrency: order.wantCurrency,
-        takerPay: order.takerPay,          // lo que paga quien acepta (wantCurrency)
-        takerReceive: order.takerReceive,  // lo que recibe quien acepta (giveCurrency, menos 0,75 %)
-        makerReceive: order.makerReceive,  // lo que recibe el creador (wantCurrency, menos 0,75 %)
-        taker: order.taker || null,
-        takerName: order.takerName || null,
-        fundOrigin: order.fundOrigin || null,
-        date: order.date,
-        completedAt: order.completedAt || null
-    };
-}
-
 // ===== API =====
 
 app.post('/api/login', (req, res) => {
@@ -522,7 +502,46 @@ app.post('/api/transfer', requireAuth, (req, res) => {
     res.json({ ok: true, transaction: tx, balances: req.user.balances });
 });
 
-// ===== Mercado P2P: ofertas de intercambio entre usuarios con escrow =====
+// ===== Mercado P2P: emparejamiento con custodia por entidad licenciada socia =====
+// Flow Money nunca recibe ni custodia fondos: cada parte hace una transferencia
+// local a la cuenta escrow segregada de Mangopay S.A.; verificados ambos depósitos,
+// el custodio libera simultáneamente.
+
+const ESCROW_ACCOUNT = {
+    holder: 'Mangopay S.A.',
+    description: 'Entidad de dinero electrónico licenciada - cuenta escrow segregada',
+    iban: 'ES21 0049 1805 0322 3344 5566',
+    swift: 'MGOPESM2'
+};
+
+const ORDER_CONFIRM_MS = 22000; // detección simulada de la transferencia al escrow
+
+function publicOrder(order, viewer) {
+    const isMaker = order.maker === viewer;
+    const isTaker = order.taker === viewer;
+    return {
+        id: order.id,
+        status: order.status,
+        maker: order.maker,
+        makerName: order.makerName,
+        giveAmount: order.giveAmount,
+        giveCurrency: order.giveCurrency,
+        wantCurrency: order.wantCurrency,
+        takerPay: order.takerPay,          // lo que paga quien acepta (wantCurrency)
+        takerReceive: order.takerReceive,  // lo que recibe quien acepta (giveCurrency, menos 0,75 %)
+        makerReceive: order.makerReceive,  // lo que recibe el creador (wantCurrency, menos 0,75 %)
+        taker: order.taker || null,
+        takerName: order.takerName || null,
+        fundOrigin: order.fundOrigin || null,
+        makerDeposit: order.makerDeposit,
+        takerDeposit: order.takerDeposit || null,
+        // Las referencias escrow solo las ve la parte que debe depositar
+        escrowRef: isMaker ? order.escrowRef : null,
+        takerEscrowRef: isTaker ? order.takerEscrowRef : null,
+        date: order.date,
+        completedAt: order.completedAt || null
+    };
+}
 
 // Listar mercado: ofertas abiertas de otros + mis ofertas (todas)
 app.get('/api/orders', requireAuth, (req, res) => {
@@ -532,13 +551,17 @@ app.get('/api/orders', requireAuth, (req, res) => {
     const mine = data.orders
         .filter(o => o.maker === req.user.username || o.taker === req.user.username)
         .slice().reverse().slice(0, 20);
-    res.json({ open: open.map(publicOrder), mine: mine.map(publicOrder) });
+    res.json({
+        open: open.map(o => publicOrder(o, req.user.username)),
+        mine: mine.map(o => publicOrder(o, req.user.username)),
+        escrow: ESCROW_ACCOUNT
+    });
 });
 
 // AML: orígenes de fondos aceptados en la declaración
 const FUND_ORIGINS = ['salario', 'ahorros', 'negocio', 'remesa', 'venta', 'otro'];
 
-// Publicar oferta: los fondos quedan bloqueados en custodia (escrow)
+// Publicar oferta: nace esperando el depósito del creador al escrow del custodio
 app.post('/api/orders', requireAuth, (req, res) => {
     const { giveCurrency, wantCurrency, amount, fundOrigin } = req.body || {};
     const value = Number(amount);
@@ -555,18 +578,18 @@ app.post('/api/orders', requireAuth, (req, res) => {
 
     const market = convert(value, giveCurrency, wantCurrency);
 
-    // Escrow: la plataforma custodia los fondos del creador hasta completarse
-    req.user.balances[giveCurrency] = +(balance - value).toFixed(2);
-
     const order = {
         id: crypto.randomBytes(8).toString('hex'),
-        status: 'open',
+        status: 'awaiting_deposit',
         maker: req.user.username,
         makerName: req.user.name,
         giveAmount: value,
         giveCurrency,
         wantCurrency,
         fundOrigin,
+        escrowRef: `FM-ESC-${crypto.randomBytes(2).toString('hex').toUpperCase()}`,
+        makerDeposit: 'pending',
+        takerDeposit: 'none',
         takerPay: +market.toFixed(2),
         takerReceive: +(value * (1 - FEE)).toFixed(2),
         makerReceive: +(market * (1 - FEE)).toFixed(2),
@@ -575,32 +598,55 @@ app.post('/api/orders', requireAuth, (req, res) => {
     data.orders.push(order);
     saveData();
 
-    res.json({ ok: true, order: publicOrder(order), balances: req.user.balances });
+    res.json({ ok: true, order: publicOrder(order, req.user.username), escrow: ESCROW_ACCOUNT });
 });
 
-// Aceptar oferta: ambos depósitos verificados, liberación simultánea
-app.post('/api/orders/:id/accept', requireAuth, (req, res) => {
-    const order = data.orders.find(o => o.id === req.params.id);
-    if (!order) return res.status(404).json({ error: 'Oferta no existe' });
-    if (order.status !== 'open') return res.status(400).json({ error: 'La oferta ya no está disponible' });
-    if (order.maker === req.user.username) return res.status(400).json({ error: 'No puedes aceptar tu propia oferta' });
+// El custodio confirma el depósito del creador: el dinero sale de su banco al escrow
+function confirmMakerDeposit(order) {
+    if (order.makerDeposit !== 'sent') return;
+    const maker = data.accounts.find(a => a.username === order.maker);
+    if (!maker) { order.status = 'cancelled'; saveData(); return; }
 
-    const takerBalance = req.user.balances[order.wantCurrency] || 0;
-    if (order.takerPay > takerBalance) {
-        return res.status(400).json({ error: `Fondos insuficientes. Necesitas ${order.takerPay.toFixed(2)} ${order.wantCurrency}` });
+    const balance = maker.balances[order.giveCurrency] || 0;
+    if (order.giveAmount > balance) {
+        // Sin fondos al confirmar: la orden muere sin movimiento
+        order.status = 'cancelled';
+        order.makerDeposit = 'failed';
+        saveData();
+        return;
     }
 
-    const maker = data.accounts.find(a => a.username === order.maker);
-    if (!maker) return res.status(400).json({ error: 'La cuenta creadora ya no existe' });
+    maker.balances[order.giveCurrency] = +(balance - order.giveAmount).toFixed(2);
+    order.makerDeposit = 'received';
+    order.status = 'open';
+    saveData();
+}
 
-    // Liberación simultánea desde el escrow a ambas partes
-    req.user.balances[order.wantCurrency] = +(takerBalance - order.takerPay).toFixed(2);
-    req.user.balances[order.giveCurrency] = +(((req.user.balances[order.giveCurrency] || 0) + order.takerReceive)).toFixed(2);
+// Verificado el depósito del taker: liberación simultánea desde el escrow
+function confirmTakerDeposit(order) {
+    if (order.takerDeposit !== 'sent') return;
+    const taker = data.accounts.find(a => a.username === order.taker);
+    const maker = data.accounts.find(a => a.username === order.maker);
+    if (!taker || !maker) { order.status = 'cancelled'; saveData(); return; }
+
+    const takerBalance = taker.balances[order.wantCurrency] || 0;
+    if (order.takerPay > takerBalance) {
+        order.status = 'open'; // sigue disponible para otra contraparte
+        order.taker = null;
+        order.takerName = null;
+        order.takerDeposit = 'none';
+        order.takerEscrowRef = null;
+        saveData();
+        return;
+    }
+
+    // Liberación simultánea desde la cuenta escrow a ambas partes
+    taker.balances[order.wantCurrency] = +(takerBalance - order.takerPay).toFixed(2);
+    taker.balances[order.giveCurrency] = +(((taker.balances[order.giveCurrency] || 0) + order.takerReceive)).toFixed(2);
     maker.balances[order.wantCurrency] = +(((maker.balances[order.wantCurrency] || 0) + order.makerReceive)).toFixed(2);
 
+    order.takerDeposit = 'received';
     order.status = 'completed';
-    order.taker = req.user.username;
-    order.takerName = req.user.name;
     order.completedAt = new Date().toISOString();
 
     const base = {
@@ -613,8 +659,8 @@ app.post('/api/orders/:id/accept', requireAuth, (req, res) => {
             ...base,
             id: crypto.randomBytes(8).toString('hex'),
             type: 'p2p',
-            from: req.user.username,
-            fromName: req.user.name,
+            from: taker.username,
+            fromName: taker.name,
             to: maker.username,
             toName: maker.name,
             amountSent: order.giveAmount,
@@ -628,8 +674,8 @@ app.post('/api/orders/:id/accept', requireAuth, (req, res) => {
             type: 'p2p',
             from: maker.username,
             fromName: maker.name,
-            to: req.user.username,
-            toName: req.user.name,
+            to: taker.username,
+            toName: taker.name,
             amountSent: order.takerPay,
             currencySent: order.wantCurrency,
             amountReceived: order.takerReceive,
@@ -637,22 +683,85 @@ app.post('/api/orders/:id/accept', requireAuth, (req, res) => {
         }
     );
     saveData();
+}
 
-    res.json({ ok: true, order: publicOrder(order), balances: req.user.balances });
+function scheduleMakerConfirm(order) {
+    setTimeout(() => confirmMakerDeposit(order), ORDER_CONFIRM_MS);
+}
+
+function scheduleTakerConfirm(order) {
+    setTimeout(() => confirmTakerDeposit(order), ORDER_CONFIRM_MS);
+}
+
+// Confirmar "Ya realicé la transferencia" al escrow (creador o contraparte)
+app.post('/api/orders/:id/deposit', requireAuth, (req, res) => {
+    const order = data.orders.find(o => o.id === req.params.id);
+    if (!order) return res.status(404).json({ error: 'Oferta no existe' });
+
+    if (order.maker === req.user.username) {
+        if (order.status !== 'awaiting_deposit' || order.makerDeposit !== 'pending') {
+            return res.status(400).json({ error: 'Esta oferta no está esperando tu depósito' });
+        }
+        order.makerDeposit = 'sent';
+        saveData();
+        scheduleMakerConfirm(order);
+        return res.json({ ok: true, order: publicOrder(order, req.user.username) });
+    }
+
+    if (order.taker === req.user.username) {
+        if (order.status !== 'awaiting_taker' || order.takerDeposit !== 'pending') {
+            return res.status(400).json({ error: 'Esta operación no está esperando tu depósito' });
+        }
+        order.takerDeposit = 'sent';
+        saveData();
+        scheduleTakerConfirm(order);
+        return res.json({ ok: true, order: publicOrder(order, req.user.username) });
+    }
+
+    res.status(403).json({ error: 'No eres parte de esta operación' });
 });
 
-// Cancelar oferta abierta: el escrow devuelve los fondos al creador
+// Aceptar oferta: la contraparte recibe sus instrucciones de depósito al escrow
+app.post('/api/orders/:id/accept', requireAuth, (req, res) => {
+    const order = data.orders.find(o => o.id === req.params.id);
+    if (!order) return res.status(404).json({ error: 'Oferta no existe' });
+    if (order.status !== 'open') return res.status(400).json({ error: 'La oferta ya no está disponible' });
+    if (order.maker === req.user.username) return res.status(400).json({ error: 'No puedes aceptar tu propia oferta' });
+
+    const takerBalance = req.user.balances[order.wantCurrency] || 0;
+    if (order.takerPay > takerBalance) {
+        return res.status(400).json({ error: `Fondos insuficientes. Necesitas ${order.takerPay.toFixed(2)} ${order.wantCurrency}` });
+    }
+
+    order.status = 'awaiting_taker';
+    order.taker = req.user.username;
+    order.takerName = req.user.name;
+    order.takerDeposit = 'pending';
+    order.takerEscrowRef = `FM-ESC-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
+    saveData();
+
+    res.json({ ok: true, order: publicOrder(order, req.user.username), escrow: ESCROW_ACCOUNT });
+});
+
+// Cancelar: sin coste si no depositó; devolución íntegra del escrow si ya depositó
 app.post('/api/orders/:id/cancel', requireAuth, (req, res) => {
     const order = data.orders.find(o => o.id === req.params.id);
     if (!order) return res.status(404).json({ error: 'Oferta no existe' });
     if (order.maker !== req.user.username) return res.status(403).json({ error: 'Solo el creador puede cancelarla' });
-    if (order.status !== 'open') return res.status(400).json({ error: 'La oferta ya no está abierta' });
+    if (!['awaiting_deposit', 'open', 'awaiting_taker'].includes(order.status)) {
+        return res.status(400).json({ error: 'La oferta ya no se puede cancelar' });
+    }
 
-    req.user.balances[order.giveCurrency] = +(((req.user.balances[order.giveCurrency] || 0) + order.giveAmount)).toFixed(2);
+    let refunded = false;
+    if (order.makerDeposit === 'received') {
+        // El custodio devuelve íntegramente los fondos en escrow
+        req.user.balances[order.giveCurrency] = +(((req.user.balances[order.giveCurrency] || 0) + order.giveAmount)).toFixed(2);
+        refunded = true;
+    }
     order.status = 'cancelled';
     saveData();
 
-    res.json({ ok: true, order: publicOrder(order), balances: req.user.balances });
+    res.json({ ok: true, order: publicOrder(order, req.user.username), balances: req.user.balances, refunded });
 });
 
 // ===== Añadir dinero: depósitos por tarjeta y transferencia bancaria =====
@@ -661,12 +770,13 @@ app.post('/api/orders/:id/cancel', requireAuth, (req, res) => {
 const DEPOSIT_MIN_EUR = 10;
 const DEPOSIT_MAX_EUR = 10000;
 
-// Datos bancarios simulados de la plataforma
+// Datos bancarios de la cuenta escrow del custodio (Mangopay S.A., socia licenciada)
+// Flow Money nunca recibe ni custodia el dinero de los usuarios
 const BANK_DETAILS = {
-    holder: 'Flow Money Holding S.L.',
-    bank: 'Banco Meridian Europe',
-    iban: 'ES91 2100 0418 4502 0005 1332',
-    swift: 'FLOMESM1'
+    holder: 'Mangopay S.A.',
+    bank: 'Entidad de dinero electrónico licenciada - cuenta escrow segregada',
+    iban: 'ES21 0049 1805 0322 3344 5566',
+    swift: 'MGOPESM2'
 };
 
 function depositLimitError(currency, value) {
@@ -840,6 +950,12 @@ initStorage().then(initial => {
 
     // Reprograma la confirmación de depósitos pendientes (si el proceso murió antes)
     data.deposits.filter(d => d.status === 'pending').forEach(scheduleDeposit);
+
+    // Catch-up de operaciones P2P con depósitos al escrow en tránsito
+    data.orders.forEach(o => {
+        if (o.makerDeposit === 'sent') scheduleMakerConfirm(o);
+        if (o.takerDeposit === 'sent') scheduleTakerConfirm(o);
+    });
 
     app.listen(PORT, '0.0.0.0', () => {
         const nets = os.networkInterfaces();

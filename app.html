@@ -70,14 +70,14 @@
                 <!-- Vista: Inicio (saldos) -->
                 <section class="panel view-section" data-view="home" id="homePanel">
                     <h2>Mis saldos</h2>
-                    <p class="panel-subtitle">Se actualizan automáticamente cuando recibes dinero</p>
+                    <p class="panel-subtitle">Se actualizan automáticamente cuando recibes dinero · Saldo custodiado por entidad financiera licenciada socia</p>
                     <div class="balances-grid" id="balancesGrid"></div>
                 </section>
 
                 <!-- Vista: Mercado P2P -->
                 <section class="panel view-section" data-view="p2p" id="p2pPanel" hidden>
                     <h2>Mercado P2P</h2>
-                    <p class="panel-subtitle">Publica una oferta de intercambio o acepta la de otro usuario. Los fondos quedan en custodia (escrow) hasta que ambas partes se emparejan; comisión 0,75 % por usuario</p>
+                    <p class="panel-subtitle">Publica una oferta o acepta la de otro usuario. Flow Money nunca recibe ni custodia tu dinero: cada parte transfiere a la cuenta escrow segregada de Mangopay S.A., entidad licenciada, y verificados ambos depósitos se liberan los fondos. Comisión 0,75 % por usuario</p>
 
                     <form id="orderForm" class="transfer-form p2p-form">
                         <div class="transfer-currencies">
@@ -235,19 +235,20 @@
                         <div class="auth-error" id="depCardError"></div>
                         <div class="transfer-success" id="depCardSuccess"></div>
                         <button type="submit" class="btn-primary-full" id="depCardBtn">Pagar</button>
+                        <span class="balance-hint">Pago procesado por la pasarela de la entidad licenciada socia</span>
                     </form>
 
                     <!-- Método: transferencia bancaria -->
                     <div id="transferDeposit" hidden>
                         <div class="dep-bank-box">
-                            <h3>Transfiere a la cuenta de Flow Money</h3>
+                            <h3>Transfiere a la cuenta escrow del custodio</h3>
                             <dl class="dep-bank-details">
-                                <div><dt>Beneficiario</dt><dd id="bankHolder">Flow Money Holding S.L.</dd></div>
-                                <div><dt>Banco</dt><dd id="bankName">Banco Meridian Europe</dd></div>
-                                <div><dt>IBAN</dt><dd id="bankIban">ES91 2100 0418 4502 0005 1332</dd></div>
-                                <div><dt>SWIFT/BIC</dt><dd id="bankSwift">FLOMESM1</dd></div>
+                                <div><dt>Beneficiario</dt><dd id="bankHolder">Mangopay S.A.</dd></div>
+                                <div><dt>Cuenta</dt><dd id="bankName">Escrow segregada · entidad licenciada</dd></div>
+                                <div><dt>IBAN</dt><dd id="bankIban">ES21 0049 1805 0322 3344 5566</dd></div>
+                                <div><dt>SWIFT/BIC</dt><dd id="bankSwift">MGOPESM2</dd></div>
                             </dl>
-                            <p class="balance-hint">Haz la transferencia desde tu banco incluyendo el código de referencia que se genera abajo.</p>
+                            <p class="balance-hint">Los fondos que cargues quedan custodiados por Mangopay S.A., entidad licenciada socia. Flow Money nunca recibe ni custodia tu dinero. Haz la transferencia desde tu banco incluyendo el código de referencia que se genera abajo.</p>
                         </div>
 
                         <div id="depReferenceBox" hidden>
@@ -384,6 +385,6 @@
         </div>
     </div>
 
-    <script src="app.js?v=17"></script>
+    <script src="app.js?v=18"></script>
 </body>
 </html>
