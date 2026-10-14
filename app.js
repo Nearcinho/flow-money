@@ -174,7 +174,8 @@ const DOC_LABELS = { dni: 'DNI', pasaporte: 'Pasaporte', licencia: 'Licencia' };
 function renderKycBadge() {
     const badge = document.getElementById('kycBadge');
     const kyc = state.user.kyc;
-    if (!kyc) { badge.hidden = true; return; }
+    // Solo cuentas registradas reales (flujo QR con documento): las seed son demo
+    if (!kyc || kyc.simulated) { badge.hidden = true; return; }
 
     const docLabel = DOC_LABELS[kyc.docType] || kyc.docType || '';
     badge.hidden = false;
@@ -182,8 +183,8 @@ function renderKycBadge() {
     if (kyc.status === 'verified') {
         badge.className = 'kyc-badge kyc-verified';
         badge.innerHTML = (kyc.image ? `<img class="kyc-thumb" src="${kyc.image}" alt="Documento de identidad">` : '')
-            + `✓ ${kyc.simulated ? 'Verificado' : 'Identidad verificada'}${docLabel ? ` (${docLabel})` : ''}`;
-        badge.title = kyc.image ? 'Clic para ver el documento' : 'Verificación de demostración';
+            + `✓ Identidad verificada${docLabel ? ` (${docLabel})` : ''}`;
+        badge.title = kyc.image ? 'Clic para ver el documento' : '';
         badge.onclick = kyc.image
             ? () => {
                 document.getElementById('docModalImg').src = kyc.image;
