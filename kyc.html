@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="app.css?v=15">
+    <link rel="stylesheet" href="app.css?v=16">
     <link rel="icon" type="image/png" href="flowmoneylogo.png">
 </head>
 <body class="auth-body kyc-body">
@@ -22,7 +22,7 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#00C4CC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg>
             </div>
             <h1>Verificación de identidad</h1>
-            <p class="auth-subtitle">Para cumplir la normativa KYC/AML necesitamos fotos de tu documento (frente y reverso) y una selfie. Toma menos de dos minutos.</p>
+            <p class="auth-subtitle">Para cumplir la normativa KYC/AML necesitamos tus datos personales, fotos de tu documento (frente y reverso) y una selfie. Toma menos de dos minutos.</p>
             <ul class="kyc-tips">
                 <li>Busca un lugar bien iluminado</li>
                 <li>El documento debe verse completo y legible</li>
@@ -49,6 +49,76 @@
                     Licencia de conducir
                 </button>
             </div>
+        </div>
+
+        <!-- Datos personales (AML) -->
+        <div id="kycPersonal" hidden>
+            <p class="kyc-progress">Paso 1 de 4</p>
+            <h1>Datos personales</h1>
+            <p class="auth-subtitle">Requisito regulatorio KYC/AML: completa tu información tal como aparece en tu documento</p>
+            <form id="personalForm" class="auth-form">
+                <div class="form-group">
+                    <label for="pDocNumber">Número de documento de identidad</label>
+                    <input type="text" id="pDocNumber" required placeholder="Ej. 24.118.775-3">
+                </div>
+                <div class="form-group">
+                    <label for="pBirthDate">Fecha de nacimiento</label>
+                    <input type="date" id="pBirthDate" required>
+                </div>
+                <div class="form-group">
+                    <label for="pNationality">Nacionalidad</label>
+                    <select id="pNationality" required>
+                        <option value="" disabled selected>Selecciona</option>
+                        <option>México</option>
+                        <option>Colombia</option>
+                        <option>Ecuador</option>
+                        <option>España</option>
+                        <option>Perú</option>
+                        <option>Argentina</option>
+                        <option>Chile</option>
+                        <option>Venezuela</option>
+                        <option>Otro</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="pPhone">Teléfono</label>
+                    <input type="tel" id="pPhone" required placeholder="+56 9 1234 5678">
+                </div>
+                <div class="form-group">
+                    <label for="pStreet">Dirección (calle y número)</label>
+                    <input type="text" id="pStreet" required placeholder="Av. Providencia 1234">
+                </div>
+                <div class="dep-card-row">
+                    <div class="form-group">
+                        <label for="pCity">Ciudad</label>
+                        <input type="text" id="pCity" required placeholder="Santiago">
+                    </div>
+                    <div class="form-group">
+                        <label for="pPostal">Código postal</label>
+                        <input type="text" id="pPostal" required placeholder="7500000">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="pOccupation">Ocupación</label>
+                    <select id="pOccupation" required>
+                        <option value="" disabled selected>Selecciona</option>
+                        <option value="empleado">Empleado</option>
+                        <option value="independiente">Independiente</option>
+                        <option value="empresario">Empresario</option>
+                        <option value="estudiante">Estudiante</option>
+                        <option value="otro">Otro</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>¿Eres una persona políticamente expuesta (PEP)?</label>
+                    <div class="kyc-pep">
+                        <label class="aml-check"><input type="radio" name="pPep" value="no" checked> <span>No</span></label>
+                        <label class="aml-check"><input type="radio" name="pPep" value="si"> <span>Sí</span></label>
+                    </div>
+                </div>
+                <div class="auth-error" id="personalError"></div>
+                <button type="submit" class="btn-primary-full">Continuar</button>
+            </form>
         </div>
 
         <!-- Captura (paso genérico: frente / reverso / selfie) -->
@@ -94,7 +164,7 @@
 
     <script>
         const token = new URLSearchParams(window.location.search).get('t');
-        const steps = ['kycWelcome', 'kycDocType', 'kycCamera', 'kycSummary', 'kycDone'];
+        const steps = ['kycWelcome', 'kycDocType', 'kycPersonal', 'kycCamera', 'kycSummary', 'kycDone'];
 
         // Definición de los 3 pasos de captura
         const CAPTURE_STEPS = [
@@ -104,6 +174,7 @@
         ];
 
         let docType = null;
+        let personal = null;
         let stepIndex = 0;
         const captures = { front: null, back: null, selfie: null };
         let stream = null;
@@ -122,9 +193,39 @@
         document.querySelectorAll('.kyc-doc-option').forEach(btn => {
             btn.addEventListener('click', () => {
                 docType = btn.dataset.doc;
-                stepIndex = 0;
-                startStep();
+                show('kycPersonal');
             });
+        });
+
+        // Paso de datos personales: validación básica en cliente, la completa va al servidor
+        document.getElementById('personalForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const errorBox = document.getElementById('personalError');
+            errorBox.textContent = '';
+
+            const birth = new Date(document.getElementById('pBirthDate').value);
+            const age = (Date.now() - birth.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
+            if (isNaN(birth.getTime()) || age < 18) {
+                errorBox.textContent = 'Debes ser mayor de 18 años para usar Flow Money';
+                return;
+            }
+
+            personal = {
+                docNumber: document.getElementById('pDocNumber').value.trim(),
+                birthDate: document.getElementById('pBirthDate').value,
+                nationality: document.getElementById('pNationality').value,
+                phone: document.getElementById('pPhone').value.trim(),
+                address: {
+                    street: document.getElementById('pStreet').value.trim(),
+                    city: document.getElementById('pCity').value.trim(),
+                    postalCode: document.getElementById('pPostal').value.trim()
+                },
+                occupation: document.getElementById('pOccupation').value,
+                pep: document.querySelector('input[name="pPep"]:checked').value
+            };
+
+            stepIndex = 0;
+            startStep();
         });
 
         // ===== Detección automática (igual criterio en los 3 pasos) =====
@@ -148,7 +249,7 @@
         async function startStep() {
             const step = currentStep();
             show('kycCamera');
-            document.getElementById('kycProgress').textContent = `Paso ${stepIndex + 1} de ${CAPTURE_STEPS.length}`;
+            document.getElementById('kycProgress').textContent = `Paso ${stepIndex + 2} de ${CAPTURE_STEPS.length + 1}`;
             document.getElementById('captureTitle').textContent = step.title;
             document.getElementById('captureSubtitle').textContent = step.subtitle;
             document.getElementById('captureBtn').textContent = step.oval ? 'Tomar selfie' : 'Capturar';
@@ -323,6 +424,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         docType,
+                        personal,
                         front: captures.front,
                         back: captures.back,
                         selfie: captures.selfie

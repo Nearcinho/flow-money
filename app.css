@@ -974,3 +974,26 @@ body {
     border: 2px solid var(--gray-light);
     display: block;
 }
+
+/* Datos personales KYC (perfil) y radio PEP (kyc.html) */
+.profile-kyc-data {
+    margin: 0.9rem 0 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.profile-kyc-data div {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    font-size: 0.9rem;
+    padding: 0.35rem 0;
+    border-bottom: 1px solid var(--gray-light);
+}
+
+.profile-kyc-data dt { color: #5a6b7c; }
+.profile-kyc-data dd { font-weight: 600; text-align: right; }
+
+.kyc-pep { display: flex; gap: 1.5rem; }
+.kyc-pep .aml-check { margin-bottom: 0; }

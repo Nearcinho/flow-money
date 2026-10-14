@@ -635,18 +635,55 @@ function renderProfile() {
     if (!kyc) {
         box.innerHTML = '<p class="tx-empty">Sin información de verificación</p>';
     } else if (kyc.simulated) {
-        box.innerHTML = '<p class="profile-kyc-note"><span class="order-badge badge-done">Cuenta de demostración verificada</span></p>';
+        let seedPersonal = '';
+        if (kyc.personal) {
+            const p = kyc.personal;
+            const OCC = { empleado: 'Empleado', independiente: 'Independiente', empresario: 'Empresario', estudiante: 'Estudiante', otro: 'Otro' };
+            seedPersonal = `
+                <dl class="profile-kyc-data">
+                    <div><dt>N° de documento</dt><dd>${p.docNumber}</dd></div>
+                    <div><dt>Fecha de nacimiento</dt><dd>${new Date(p.birthDate + 'T12:00:00').toLocaleDateString('es-CL')}</dd></div>
+                    <div><dt>Nacionalidad</dt><dd>${p.nationality}</dd></div>
+                    <div><dt>Teléfono</dt><dd>${p.phone}</dd></div>
+                    <div><dt>Dirección</dt><dd>${p.address.street}, ${p.address.city} ${p.address.postalCode}</dd></div>
+                    <div><dt>Ocupación</dt><dd>${OCC[p.occupation] || p.occupation}</dd></div>
+                    <div><dt>Persona políticamente expuesta</dt><dd>${p.pep === 'si' ? 'Sí' : 'No'}</dd></div>
+                </dl>
+                <p class="order-sub">Para modificar estos datos contacta a soporte.</p>
+            `;
+        }
+        box.innerHTML = `<p class="profile-kyc-note"><span class="order-badge badge-done">Cuenta de demostración verificada</span></p>${seedPersonal}`;
     } else if (kyc.status === 'verified') {
         const docLabel = DOC_LABELS[kyc.docType] || kyc.docType || '';
         const date = kyc.verifiedAt ? new Date(kyc.verifiedAt).toLocaleString('es-CL') : '';
         const shots = [
             ['Frente', kyc.front], ['Reverso', kyc.back], ['Selfie', kyc.selfie]
         ].filter(([, src]) => src);
+
+        let personalHtml = '';
+        if (kyc.personal) {
+            const p = kyc.personal;
+            const OCC = { empleado: 'Empleado', independiente: 'Independiente', empresario: 'Empresario', estudiante: 'Estudiante', otro: 'Otro' };
+            personalHtml = `
+                <dl class="profile-kyc-data">
+                    <div><dt>N° de documento</dt><dd>${p.docNumber}</dd></div>
+                    <div><dt>Fecha de nacimiento</dt><dd>${new Date(p.birthDate + 'T12:00:00').toLocaleDateString('es-CL')}</dd></div>
+                    <div><dt>Nacionalidad</dt><dd>${p.nationality}</dd></div>
+                    <div><dt>Teléfono</dt><dd>${p.phone}</dd></div>
+                    <div><dt>Dirección</dt><dd>${p.address.street}, ${p.address.city} ${p.address.postalCode}</dd></div>
+                    <div><dt>Ocupación</dt><dd>${OCC[p.occupation] || p.occupation}</dd></div>
+                    <div><dt>Persona políticamente expuesta</dt><dd>${p.pep === 'si' ? 'Sí' : 'No'}</dd></div>
+                </dl>
+                <p class="order-sub">Para modificar estos datos contacta a soporte.</p>
+            `;
+        }
+
         box.innerHTML = `
             <p class="profile-kyc-note">
                 <span class="order-badge badge-done">Identidad verificada</span>
                 <span class="order-sub">${docLabel}${date ? ' · ' + date : ''}</span>
             </p>
+            ${personalHtml}
             <div class="profile-kyc-shots">
                 ${shots.map(([label, src], i) => `
                     <button type="button" class="profile-kyc-shot" data-shot="${i}">

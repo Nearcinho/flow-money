@@ -25,8 +25,26 @@ const RATES = {
 
 // ===== Datos iniciales =====
 function seedData() {
-    // Cuentas del tribunal: verificadas de fábrica (KYC simulado, sin imagen)
-    const kycSeed = () => ({ status: 'verified', docType: 'DNI', verifiedAt: new Date().toISOString(), simulated: true });
+    // Datos personales simulados de cada autora/autor (coherentes con la demo)
+    const personalSeed = (docNumber, birthDate, nationality, phone, street, city, postalCode, occupation) => ({
+        docNumber, birthDate, nationality, phone,
+        address: { street, city, postalCode },
+        occupation, pep: 'no'
+    });
+
+    const kycSeed = (personal) => ({
+        status: 'verified', docType: 'DNI', verifiedAt: new Date().toISOString(), simulated: true, personal
+    });
+
+    const personales = [
+        personalSeed('48.392.117-5', '1988-04-12', 'Uruguay', '+598 99 123 456', 'Av. 18 de Julio 1234', 'Montevideo', '11100', 'Empleado'),
+        personalSeed('V-14.882.330', '1975-09-03', 'Venezuela', '+58 412 555 0182', 'Calle Los Mangos 45', 'Caracas', '1010', 'Empresario'),
+        personalSeed('32.118.904-K', '1996-02-27', 'España', '+34 612 345 678', 'Carrer de Balmes 88', 'Barcelona', '08008', 'Independiente'),
+        personalSeed('1.042.876.551', '1993-07-19', 'Colombia', '+57 310 456 7890', 'Cra 7 # 71-21', 'Bogotá', '110231', 'Empleado'),
+        personalSeed('25.440.882-1', '1990-11-05', 'Chile', '+56 9 8765 4321', 'Av. Providencia 1234', 'Santiago', '7500000', 'Empleado'),
+        personalSeed('1.059.332.774', '1985-06-23', 'Colombia', '+57 301 234 5678', 'Calle 50 # 36-22', 'Medellín', '050010', 'Independiente'),
+        personalSeed('24.118.775-3', '1998-01-30', 'Chile', '+56 9 5555 0142', 'Los Leones 990', 'Santiago', '7510000', 'Estudiante')
+    ];
 
     const evaluador = (n, password) => ({
         username: `evaluador${n}`,
@@ -36,7 +54,7 @@ function seedData() {
         country: 'Chile',
         createdAt: '2026-01-15T12:00:00.000Z',
         balances: { EUR: 100, MXN: 1875, COP: 430000, CLP: 96000, PEN: 400, ARS: 95000, VES: 4000 },
-        kyc: kycSeed()
+        kyc: kycSeed(personales[n - 1])
     });
 
     return {
@@ -55,7 +73,7 @@ function seedData() {
                 country: 'Chile',
                 createdAt: '2026-01-15T12:00:00.000Z',
                 balances: { EUR: 100, MXN: 1875, COP: 430000, CLP: 96000, PEN: 400, ARS: 95000, VES: 4000 },
-                kyc: kycSeed()
+                kyc: kycSeed(personales[6])
             }
         ],
         transactions: [],
@@ -196,6 +214,7 @@ function publicUser(account) {
                 front: account.kyc.front || account.kyc.image || null,
                 back: account.kyc.back || null,
                 selfie: account.kyc.selfie || null,
+                personal: account.kyc.personal || null,
                 verifiedAt: account.kyc.verifiedAt || null,
                 simulated: !!account.kyc.simulated
             }
@@ -318,9 +337,11 @@ app.get('/api/kyc/:token/status', (req, res) => {
     res.json({ status: account.kyc && account.kyc.status === 'verified' ? 'completed' : 'pending' });
 });
 
-// El celular sube las fotos de la verificación (frente, reverso y selfie)
+// El celular sube los datos personales y las fotos (frente, reverso y selfie)
 const KYC_DOC_TYPES = ['dni', 'pasaporte', 'licencia'];
 const KYC_IMAGE_MAX = 400000; // ~300 KB por imagen en base64
+const KYC_COUNTRIES = ['México', 'Colombia', 'Ecuador', 'España', 'Perú', 'Argentina', 'Chile', 'Venezuela', 'Otro'];
+const KYC_OCCUPATIONS = ['empleado', 'independiente', 'empresario', 'estudiante', 'otro'];
 
 function validKycImage(img) {
     return typeof img === 'string'
@@ -328,11 +349,33 @@ function validKycImage(img) {
         && img.length <= KYC_IMAGE_MAX;
 }
 
+// Validación AML de los datos personales; devuelve mensaje de error o null
+function validateKycPersonal(p) {
+    if (!p || typeof p !== 'object') return 'Faltan los datos personales';
+    if (!/^[A-Za-z0-9.\-]{5,20}$/.test(String(p.docNumber || '').trim())) return 'Número de documento no válido';
+
+    const birth = new Date(p.birthDate);
+    if (isNaN(birth.getTime())) return 'Fecha de nacimiento no válida';
+    const age = (Date.now() - birth.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
+    if (age < 18) return 'Debes ser mayor de 18 años para usar Flow Money';
+    if (age > 120) return 'Fecha de nacimiento no válida';
+
+    if (!KYC_COUNTRIES.includes(p.nationality)) return 'Nacionalidad no válida';
+    if (String(p.phone || '').replace(/\D/g, '').length < 6) return 'Teléfono no válido';
+    const addr = p.address || {};
+    if (!String(addr.street || '').trim() || !String(addr.city || '').trim() || !String(addr.postalCode || '').trim()) {
+        return 'La dirección completa es obligatoria (calle, ciudad, código postal)';
+    }
+    if (!KYC_OCCUPATIONS.includes(p.occupation)) return 'Ocupación no válida';
+    if (p.pep !== 'si' && p.pep !== 'no') return 'Debes indicar si eres persona políticamente expuesta (PEP)';
+    return null;
+}
+
 app.post('/api/kyc/:token', (req, res) => {
     const account = data.accounts.find(a => a.kycToken === req.params.token);
     if (!account) return res.status(404).json({ error: 'Verificación no encontrada' });
 
-    const { docType, front, back, selfie, image } = req.body || {};
+    const { docType, front, back, selfie, image, personal } = req.body || {};
     if (!KYC_DOC_TYPES.includes(docType)) return res.status(400).json({ error: 'Tipo de documento no válido' });
 
     // Compatibilidad: el flujo antiguo enviaba una sola foto en 'image'
@@ -341,9 +384,27 @@ app.post('/api/kyc/:token', (req, res) => {
     if (!validKycImage(back)) return res.status(400).json({ error: 'La foto del reverso no es válida o supera ~300 KB' });
     if (!validKycImage(selfie)) return res.status(400).json({ error: 'La selfie no es válida o supera ~300 KB' });
 
+    const personalError = validateKycPersonal(personal);
+    if (personalError) return res.status(400).json({ error: personalError });
+
+    const cleanPersonal = {
+        docNumber: String(personal.docNumber).trim(),
+        birthDate: personal.birthDate,
+        nationality: personal.nationality,
+        phone: String(personal.phone).trim(),
+        address: {
+            street: String(personal.address.street).trim(),
+            city: String(personal.address.city).trim(),
+            postalCode: String(personal.address.postalCode).trim()
+        },
+        occupation: personal.occupation,
+        pep: personal.pep
+    };
+
     account.kyc = {
         status: 'verified',
         docType,
+        personal: cleanPersonal,
         front: frontImg,
         back,
         selfie,
