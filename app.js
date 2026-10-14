@@ -185,12 +185,12 @@ function renderKycBadge() {
         badge.innerHTML = (kyc.image ? `<img class="kyc-thumb" src="${kyc.image}" alt="Documento de identidad">` : '')
             + `✓ Identidad verificada${docLabel ? ` (${docLabel})` : ''}`;
         badge.title = kyc.image ? 'Clic para ver el documento' : '';
-        badge.onclick = kyc.image
-            ? () => {
-                document.getElementById('docModalImg').src = kyc.image;
-                document.getElementById('docModal').hidden = false;
-            }
-            : null;
+        // Doble protección: sin imagen el badge no es clickeable y el visor nunca abre
+        badge.onclick = !kyc.image ? null : () => {
+            if (!kyc.image) return;
+            document.getElementById('docModalImg').src = kyc.image;
+            document.getElementById('docModal').hidden = false;
+        };
     } else {
         badge.className = 'kyc-badge kyc-pending';
         badge.textContent = '⏳ Verificación pendiente';
@@ -278,10 +278,6 @@ document.getElementById('orderForm').addEventListener('submit', (e) => {
     document.getElementById('amlDeclare').checked = false;
     document.getElementById('amlError').textContent = '';
     document.getElementById('amlModal').hidden = false;
-});
-
-document.getElementById('amlCancel').addEventListener('click', () => {
-    document.getElementById('amlModal').hidden = true;
 });
 
 document.getElementById('amlConfirm').addEventListener('click', async () => {
@@ -432,12 +428,23 @@ async function refreshBalances() {
     renderKycBadge();
 }
 
-// Cerrar modal del documento KYC
-document.getElementById('docModalClose').addEventListener('click', () => {
-    document.getElementById('docModal').hidden = true;
+// ===== Cierre de modales (documento KYC y AML): botón, Escape y clic fuera =====
+function closeModal(id) {
+    document.getElementById(id).hidden = true;
+}
+
+document.getElementById('docModalClose').addEventListener('click', () => closeModal('docModal'));
+document.getElementById('amlCancel').addEventListener('click', () => closeModal('amlModal'));
+
+['docModal', 'amlModal'].forEach(id => {
+    const overlay = document.getElementById(id);
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) overlay.hidden = true;
+    });
 });
-document.getElementById('docModal').addEventListener('click', (e) => {
-    if (e.target.id === 'docModal') e.target.hidden = true;
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') ['docModal', 'amlModal'].forEach(closeModal);
 });
 
 // ===== Polling: mantiene ambos notebooks sincronizados =====

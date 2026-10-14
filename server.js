@@ -459,7 +459,14 @@ app.post('/api/reset', requireAuth, (req, res) => {
 });
 
 // ===== Archivos estáticos =====
-app.use(express.static(__dirname));
+// HTML/JS/CSS sin caché: los cambios llegan sin hard-refresh (validación condicional)
+app.use(express.static(__dirname, {
+    setHeaders: (res, filePath) => {
+        if (/\.(html|js|css)$/i.test(filePath)) {
+            res.setHeader('Cache-Control', 'no-cache');
+        }
+    }
+}));
 
 app.listen(PORT, '0.0.0.0', () => {
     const nets = os.networkInterfaces();

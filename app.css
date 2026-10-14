@@ -635,6 +635,8 @@ body {
 }
 
 /* ===== Modales del dashboard (AML / documento) ===== */
+.fm-modal-overlay[hidden] { display: none; }
+
 .fm-modal-overlay {
     position: fixed;
     inset: 0;
