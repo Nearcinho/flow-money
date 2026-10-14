@@ -51,6 +51,7 @@ async function loadSession() {
     document.getElementById('userName').textContent = user.name;
     document.getElementById('userUsername').textContent = '@' + user.username;
     document.getElementById('userAvatar').textContent = initials(user.name);
+    renderKycBadge();
 
     const recipientSelect = document.getElementById('recipient');
     recipientSelect.innerHTML = users
@@ -162,6 +163,40 @@ function orderBadge(o) {
     return '<span class="order-badge badge-cancelled">Cancelada</span>';
 }
 
+// Sello AML: la orden (y sus transacciones) llevan el origen de fondos declarado
+function amlBadge(hasOrigin) {
+    return hasOrigin ? '<span class="order-badge badge-aml">AML ✓ Origen declarado</span>' : '';
+}
+
+// ===== KYC: badge de identidad en el header =====
+const DOC_LABELS = { dni: 'DNI', pasaporte: 'Pasaporte', licencia: 'Licencia' };
+
+function renderKycBadge() {
+    const badge = document.getElementById('kycBadge');
+    const kyc = state.user.kyc;
+    if (!kyc) { badge.hidden = true; return; }
+
+    const docLabel = DOC_LABELS[kyc.docType] || kyc.docType || '';
+    badge.hidden = false;
+
+    if (kyc.status === 'verified') {
+        badge.className = 'kyc-badge kyc-verified';
+        badge.innerHTML = (kyc.image ? `<img class="kyc-thumb" src="${kyc.image}" alt="Documento de identidad">` : '')
+            + `✓ ${kyc.simulated ? 'Verificado' : 'Identidad verificada'}${docLabel ? ` (${docLabel})` : ''}`;
+        badge.title = kyc.image ? 'Clic para ver el documento' : 'Verificación de demostración';
+        badge.onclick = kyc.image
+            ? () => {
+                document.getElementById('docModalImg').src = kyc.image;
+                document.getElementById('docModal').hidden = false;
+            }
+            : null;
+    } else {
+        badge.className = 'kyc-badge kyc-pending';
+        badge.textContent = '⏳ Verificación pendiente';
+        badge.onclick = null;
+    }
+}
+
 async function loadOrders() {
     const { open, mine } = await api('/api/orders');
 
@@ -174,7 +209,7 @@ async function loadOrders() {
                 <div class="order-details">
                     <strong>${o.makerName} entrega ${fmt(o.giveAmount, o.giveCurrency)}</strong>
                     <span class="order-sub">Tú pagas ${fmt(o.takerPay, o.wantCurrency)} y recibes ${fmt(o.takerReceive, o.giveCurrency)}</span>
-                    ${orderBadge(o)}
+                    ${orderBadge(o)} ${amlBadge(o.fundOrigin)}
                 </div>
                 <button class="btn-accept" data-accept="${o.id}">Aceptar</button>
             </div>
@@ -203,7 +238,7 @@ async function loadOrders() {
                     <div class="order-details">
                         <strong>${title}</strong>
                         <span class="order-sub">${sub}</span>
-                        ${orderBadge(o)}
+                        ${orderBadge(o)} ${amlBadge(o.fundOrigin)}
                     </div>
                     ${cancelBtn}
                 </div>
@@ -216,14 +251,58 @@ document.getElementById('ordAmount').addEventListener('input', updateOrderConver
 document.getElementById('ordGiveCurrency').addEventListener('change', updateOrderConversion);
 document.getElementById('ordWantCurrency').addEventListener('change', updateOrderConversion);
 
-document.getElementById('orderForm').addEventListener('submit', async (e) => {
+// ===== AML: modal de declaración de origen de fondos antes de publicar =====
+document.getElementById('orderForm').addEventListener('submit', (e) => {
     e.preventDefault();
     const errorBox = document.getElementById('ordError');
     const successBox = document.getElementById('ordSuccess');
-    const btn = document.getElementById('ordBtn');
     errorBox.textContent = '';
     successBox.textContent = '';
+
+    const give = document.getElementById('ordGiveCurrency').value;
+    const want = document.getElementById('ordWantCurrency').value;
+    const amount = parseFloat(document.getElementById('ordAmount').value);
+
+    if (!isFinite(amount) || amount <= 0) {
+        errorBox.textContent = 'Monto no válido';
+        return;
+    }
+    if (give === want) {
+        errorBox.textContent = 'Elige dos monedas distintas';
+        return;
+    }
+
+    // Abrir la declaración AML; la publicación real ocurre al confirmarla
+    document.getElementById('amlOrigin').value = '';
+    document.getElementById('amlDeclare').checked = false;
+    document.getElementById('amlError').textContent = '';
+    document.getElementById('amlModal').hidden = false;
+});
+
+document.getElementById('amlCancel').addEventListener('click', () => {
+    document.getElementById('amlModal').hidden = true;
+});
+
+document.getElementById('amlConfirm').addEventListener('click', async () => {
+    const amlError = document.getElementById('amlError');
+    const fundOrigin = document.getElementById('amlOrigin').value;
+    const declared = document.getElementById('amlDeclare').checked;
+
+    if (!fundOrigin) {
+        amlError.textContent = 'Selecciona el origen de los fondos';
+        return;
+    }
+    if (!declared) {
+        amlError.textContent = 'Debes declarar que los fondos provienen de actividades lícitas';
+        return;
+    }
+
+    const errorBox = document.getElementById('ordError');
+    const successBox = document.getElementById('ordSuccess');
+    const btn = document.getElementById('amlConfirm');
+    amlError.textContent = '';
     btn.disabled = true;
+    btn.textContent = 'Publicando...';
 
     try {
         const res = await fetch('/api/orders', {
@@ -232,15 +311,18 @@ document.getElementById('orderForm').addEventListener('submit', async (e) => {
             body: JSON.stringify({
                 giveCurrency: document.getElementById('ordGiveCurrency').value,
                 wantCurrency: document.getElementById('ordWantCurrency').value,
-                amount: parseFloat(document.getElementById('ordAmount').value)
+                amount: parseFloat(document.getElementById('ordAmount').value),
+                fundOrigin
             })
         });
         const json = await res.json();
 
         if (!res.ok) {
+            document.getElementById('amlModal').hidden = true;
             errorBox.textContent = json.error || 'Error al publicar la oferta';
         } else {
             const o = json.order;
+            document.getElementById('amlModal').hidden = true;
             successBox.textContent = `✓ Oferta publicada: ${fmt(o.giveAmount, o.giveCurrency)} en custodia escrow, esperando contraparte`;
             document.getElementById('ordAmount').value = '';
             state.user.balances = json.balances;
@@ -249,9 +331,11 @@ document.getElementById('orderForm').addEventListener('submit', async (e) => {
             await loadOrders();
         }
     } catch (err) {
+        document.getElementById('amlModal').hidden = true;
         errorBox.textContent = 'No se pudo conectar con el servidor';
     } finally {
         btn.disabled = false;
+        btn.textContent = 'Confirmar y publicar oferta';
     }
 });
 
@@ -329,6 +413,7 @@ async function loadTransactions() {
                 <div class="tx-details">
                     <strong>${title}</strong>
                     <span class="tx-date">${date}</span>
+                    ${isP2p ? amlBadge(t.fundOrigin) : ''}
                 </div>
                 <div class="tx-amounts">
                     <span class="tx-sent">− ${fmt(t.amountSent, t.currencySent)}</span>
@@ -343,7 +428,16 @@ async function refreshBalances() {
     const { user } = await api('/api/me');
     state.user = user;
     renderBalances();
+    renderKycBadge();
 }
+
+// Cerrar modal del documento KYC
+document.getElementById('docModalClose').addEventListener('click', () => {
+    document.getElementById('docModal').hidden = true;
+});
+document.getElementById('docModal').addEventListener('click', (e) => {
+    if (e.target.id === 'docModal') e.target.hidden = true;
+});
 
 // ===== Polling: mantiene ambos notebooks sincronizados =====
 async function poll() {

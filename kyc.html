@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Verificación de identidad - Flow Money</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="app.css">
+    <link rel="icon" type="image/png" href="flowmoneylogo.png">
+</head>
+<body class="auth-body kyc-body">
+    <div class="auth-card kyc-card">
+        <a href="index.html" class="auth-logo">
+            <img src="flowmoneylogoblue.png" alt="Flow Money">
+        </a>
+
+        <!-- Bienvenida -->
+        <div id="kycWelcome">
+            <div class="kyc-shield">🛡️</div>
+            <h1>Verificación de identidad</h1>
+            <p class="auth-subtitle">Para cumplir la normativa KYC/AML, fotografía un documento de identidad vigente. Toma menos de un minuto.</p>
+            <ul class="kyc-tips">
+                <li>Busca un lugar bien iluminado</li>
+                <li>El documento debe verse completo y legible</li>
+                <li>Sin filtros ni reflejos</li>
+            </ul>
+            <button class="btn-primary-full" id="kycStartBtn">Comenzar verificación</button>
+        </div>
+
+        <!-- Tipo de documento -->
+        <div id="kycDocType" hidden>
+            <h1>Elige tu documento</h1>
+            <p class="auth-subtitle">¿Con qué documento vas a verificarte?</p>
+            <div class="kyc-doc-options">
+                <button class="kyc-doc-option" data-doc="dni"><span class="kyc-doc-icon">🪪</span> DNI / INE / Cédula</button>
+                <button class="kyc-doc-option" data-doc="pasaporte"><span class="kyc-doc-icon">📘</span> Pasaporte</button>
+                <button class="kyc-doc-option" data-doc="licencia"><span class="kyc-doc-icon">🚗</span> Licencia de conducir</button>
+            </div>
+        </div>
+
+        <!-- Cámara -->
+        <div id="kycCamera" hidden>
+            <h1>Escanea tu documento</h1>
+            <p class="auth-subtitle">Encuadra el documento dentro del marco</p>
+            <div class="kyc-viewfinder">
+                <video id="kycVideo" autoplay playsinline muted></video>
+                <div class="kyc-frame"><div class="kyc-scanline"></div></div>
+            </div>
+            <div class="auth-error" id="cameraError"></div>
+            <button class="btn-primary-full" id="captureBtn">📸 Capturar documento</button>
+            <label class="kyc-file-fallback">
+                ¿Sin cámara? <span class="auth-link">Sube una foto del documento</span>
+                <input type="file" id="fileFallback" accept="image/*" hidden>
+            </label>
+        </div>
+
+        <!-- Preview -->
+        <div id="kycPreview" hidden>
+            <h1>Revisa la captura</h1>
+            <p class="auth-subtitle">Verifica que el documento se lea con claridad</p>
+            <div class="kyc-preview-box"><img id="previewImg" alt="Documento capturado"></div>
+            <div class="auth-error" id="uploadError"></div>
+            <button class="btn-primary-full" id="uploadBtn">Enviar documento</button>
+            <button class="btn-ghost-dark" id="retryBtn">Repetir foto</button>
+        </div>
+
+        <!-- Éxito -->
+        <div id="kycDone" hidden>
+            <div class="kyc-success-icon">✓</div>
+            <h1>Documento recibido</h1>
+            <p class="auth-subtitle">Tu identidad ha sido verificada correctamente.<br><strong>Puedes volver al computador.</strong></p>
+        </div>
+    </div>
+
+    <script>
+        const token = new URLSearchParams(window.location.search).get('t');
+        const steps = ['kycWelcome', 'kycDocType', 'kycCamera', 'kycPreview', 'kycDone'];
+        let docType = null;
+        let capturedImage = null;
+        let stream = null;
+
+        function show(id) {
+            steps.forEach(s => document.getElementById(s).hidden = s !== id);
+        }
+
+        if (!token) {
+            document.getElementById('kycWelcome').innerHTML =
+                '<h1>Enlace no válido</h1><p class="auth-subtitle">Este enlace de verificación no existe o ya fue utilizado.</p>';
+        }
+
+        document.getElementById('kycStartBtn').addEventListener('click', () => show('kycDocType'));
+
+        document.querySelectorAll('.kyc-doc-option').forEach(btn => {
+            btn.addEventListener('click', () => {
+                docType = btn.dataset.doc;
+                startCamera();
+            });
+        });
+
+        async function startCamera() {
+            show('kycCamera');
+            document.getElementById('cameraError').textContent = '';
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment', width: { ideal: 1280 } },
+                    audio: false
+                });
+                document.getElementById('kycVideo').srcObject = stream;
+            } catch (err) {
+                document.getElementById('cameraError').textContent =
+                    'No se pudo acceder a la cámara. Usa la opción de subir foto.';
+            }
+        }
+
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(t => t.stop());
+                stream = null;
+            }
+        }
+
+        // Comprime la imagen: ancho máx 800 px, JPEG 0.7 (queda bajo ~300 KB)
+        function compressImage(source, width, height, cb) {
+            const scale = Math.min(1, 800 / width);
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.round(width * scale);
+            canvas.height = Math.round(height * scale);
+            canvas.getContext('2d').drawImage(source, 0, 0, canvas.width, canvas.height);
+            cb(canvas.toDataURL('image/jpeg', 0.7));
+        }
+
+        document.getElementById('captureBtn').addEventListener('click', () => {
+            const video = document.getElementById('kycVideo');
+            if (!video.videoWidth) {
+                document.getElementById('cameraError').textContent = 'La cámara aún no está lista, intenta de nuevo.';
+                return;
+            }
+            compressImage(video, video.videoWidth, video.videoHeight, (dataUrl) => {
+                capturedImage = dataUrl;
+                document.getElementById('previewImg').src = dataUrl;
+                stopCamera();
+                show('kycPreview');
+            });
+        });
+
+        document.getElementById('fileFallback').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const img = new Image();
+            img.onload = () => {
+                compressImage(img, img.naturalWidth, img.naturalHeight, (dataUrl) => {
+                    capturedImage = dataUrl;
+                    document.getElementById('previewImg').src = dataUrl;
+                    stopCamera();
+                    show('kycPreview');
+                });
+            };
+            img.src = URL.createObjectURL(file);
+        });
+
+        document.getElementById('retryBtn').addEventListener('click', () => {
+            capturedImage = null;
+            startCamera();
+        });
+
+        document.getElementById('uploadBtn').addEventListener('click', async () => {
+            const btn = document.getElementById('uploadBtn');
+            const errorBox = document.getElementById('uploadError');
+            errorBox.textContent = '';
+            btn.disabled = true;
+            btn.textContent = 'Enviando...';
+
+            try {
+                const res = await fetch(`/api/kyc/${token}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ docType, image: capturedImage })
+                });
+                const json = await res.json();
+
+                if (!res.ok) {
+                    errorBox.textContent = json.error || 'No se pudo enviar el documento';
+                    btn.disabled = false;
+                    btn.textContent = 'Enviar documento';
+                } else {
+                    show('kycDone');
+                }
+            } catch (err) {
+                errorBox.textContent = 'No se pudo conectar con el servidor';
+                btn.disabled = false;
+                btn.textContent = 'Enviar documento';
+            }
+        });
+    </script>
+</body>
+</html>

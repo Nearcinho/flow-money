@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear cuenta - Flow Money</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="app.css">
+    <link rel="icon" type="image/png" href="flowmoneylogo.png">
+</head>
+<body class="auth-body">
+    <div class="auth-card">
+        <a href="index.html" class="auth-logo">
+            <img src="flowmoneylogoblue.png" alt="Flow Money">
+        </a>
+
+        <!-- Paso 1: datos de la cuenta -->
+        <div id="stepRegister">
+            <div class="auth-steps"><span class="auth-step active">1. Tu cuenta</span><span class="auth-step">2. Verifica tu identidad</span></div>
+            <h1>Crea tu cuenta</h1>
+            <p class="auth-subtitle">Recibe saldos de bienvenida simulados para probar la plataforma</p>
+
+            <form id="registerForm" class="auth-form">
+                <div class="form-group">
+                    <label for="regName">Nombre completo</label>
+                    <input type="text" id="regName" autocomplete="name" required placeholder="María Pérez González">
+                </div>
+                <div class="form-group">
+                    <label for="regEmail">Email</label>
+                    <input type="email" id="regEmail" autocomplete="email" required placeholder="maria@ejemplo.com">
+                </div>
+                <div class="form-group">
+                    <label for="regUsername">Usuario</label>
+                    <input type="text" id="regUsername" autocomplete="username" required placeholder="mariaperez">
+                </div>
+                <div class="form-group">
+                    <label for="regPassword">Contraseña</label>
+                    <input type="password" id="regPassword" autocomplete="new-password" required minlength="6" placeholder="Mínimo 6 caracteres">
+                </div>
+                <div class="form-group">
+                    <label for="regCountry">País</label>
+                    <select id="regCountry" required>
+                        <option value="" disabled selected>Selecciona tu país</option>
+                        <option>México</option>
+                        <option>Colombia</option>
+                        <option>Ecuador</option>
+                        <option>España</option>
+                        <option>Perú</option>
+                        <option>Argentina</option>
+                        <option>Chile</option>
+                        <option>Venezuela</option>
+                    </select>
+                </div>
+                <div class="auth-error" id="registerError"></div>
+                <button type="submit" class="btn-primary-full" id="registerBtn">Crear cuenta</button>
+            </form>
+
+            <p class="auth-back-wrap">¿Ya tienes cuenta? <a href="login.html" class="auth-link">Inicia sesión</a></p>
+        </div>
+
+        <!-- Paso 2: verificación de identidad (KYC) con QR -->
+        <div id="stepKyc" hidden>
+            <div class="auth-steps"><span class="auth-step done">1. Tu cuenta ✓</span><span class="auth-step active">2. Verifica tu identidad</span></div>
+            <h1>Verifica tu identidad</h1>
+            <p class="auth-subtitle">Por regulación KYC necesitamos una foto de tu documento. Escanea el código con tu celular:</p>
+
+            <div class="kyc-qr-box">
+                <img id="kycQr" alt="Código QR de verificación">
+            </div>
+
+            <p class="kyc-waiting" id="kycWaiting"><span class="kyc-spinner"></span> Esperando el documento desde tu celular...</p>
+
+            <a href="#" id="kycSameDevice" class="auth-link">Continuar en este dispositivo →</a>
+        </div>
+
+        <!-- Paso 3: verificado -->
+        <div id="stepDone" hidden>
+            <div class="kyc-success-icon">✓</div>
+            <h1>¡Identidad verificada!</h1>
+            <p class="auth-subtitle">Tu cuenta está lista. Entrando a tu panel...</p>
+            <div class="auth-error" id="loginError"></div>
+        </div>
+
+        <a href="index.html" class="auth-back">← Volver al inicio</a>
+    </div>
+
+    <script>
+        const stepRegister = document.getElementById('stepRegister');
+        const stepKyc = document.getElementById('stepKyc');
+        const stepDone = document.getElementById('stepDone');
+        let credentials = null;
+
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errorBox = document.getElementById('registerError');
+            const btn = document.getElementById('registerBtn');
+            errorBox.textContent = '';
+            btn.disabled = true;
+            btn.textContent = 'Creando cuenta...';
+
+            const body = {
+                name: document.getElementById('regName').value,
+                email: document.getElementById('regEmail').value,
+                username: document.getElementById('regUsername').value,
+                password: document.getElementById('regPassword').value,
+                country: document.getElementById('regCountry').value
+            };
+
+            try {
+                const res = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const json = await res.json();
+
+                if (!res.ok) {
+                    errorBox.textContent = json.error || 'No se pudo crear la cuenta';
+                } else {
+                    credentials = { username: body.username.trim().toLowerCase(), password: body.password };
+                    startKycStep(json.kycToken);
+                }
+            } catch (err) {
+                errorBox.textContent = 'No se pudo conectar con el servidor';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Crear cuenta';
+            }
+        });
+
+        function startKycStep(kycToken) {
+            document.getElementById('kycQr').src = `/api/kyc/${kycToken}/qr`;
+            document.getElementById('kycSameDevice').href = `kyc.html?t=${kycToken}`;
+            stepRegister.hidden = true;
+            stepKyc.hidden = false;
+
+            const poll = setInterval(async () => {
+                try {
+                    const res = await fetch(`/api/kyc/${kycToken}/status`);
+                    const json = await res.json();
+                    if (json.status === 'completed') {
+                        clearInterval(poll);
+                        finishRegistration();
+                    }
+                } catch (e) { /* reintenta en el próximo ciclo */ }
+            }, 2000);
+        }
+
+        async function finishRegistration() {
+            stepKyc.hidden = true;
+            stepDone.hidden = false;
+
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(credentials)
+                });
+                if (res.ok) {
+                    setTimeout(() => { window.location.href = 'app.html'; }, 1400);
+                } else {
+                    document.getElementById('loginError').textContent = 'Cuenta creada. Inicia sesión para continuar.';
+                    setTimeout(() => { window.location.href = 'login.html'; }, 1800);
+                }
+            } catch (err) {
+                window.location.href = 'login.html';
+            }
+        }
+    </script>
+</body>
+</html>

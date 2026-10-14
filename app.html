@@ -23,6 +23,7 @@
                         <strong id="userName">...</strong>
                         <span id="userUsername">@...</span>
                     </div>
+                    <span class="kyc-badge" id="kycBadge" hidden></span>
                 </div>
                 <button class="btn-ghost" id="resetBtn" title="Reiniciar saldos e historial">Reiniciar demo</button>
                 <button class="btn-ghost" id="logoutBtn">Cerrar sesión</button>
@@ -150,6 +151,42 @@
 
     <!-- Notificación de dinero recibido -->
     <div class="toast" id="toast"></div>
+
+    <!-- Modal AML: declaración de origen de fondos antes de publicar una oferta -->
+    <div class="fm-modal-overlay" id="amlModal" hidden>
+        <div class="fm-modal">
+            <h3>Declaración de origen de fondos</h3>
+            <p class="panel-subtitle">Por política contra el blanqueo de capitales (AML), declara el origen del dinero antes de publicar tu oferta.</p>
+            <div class="form-group">
+                <label for="amlOrigin">Origen de los fondos</label>
+                <select id="amlOrigin">
+                    <option value="" disabled selected>Selecciona una opción</option>
+                    <option value="salario">Salario / ingresos laborales</option>
+                    <option value="ahorros">Ahorros personales</option>
+                    <option value="negocio">Negocio propio</option>
+                    <option value="remesa">Remesa / apoyo familiar</option>
+                    <option value="venta">Venta de activos</option>
+                    <option value="otro">Otro</option>
+                </select>
+            </div>
+            <label class="aml-check">
+                <input type="checkbox" id="amlDeclare">
+                <span>Declaro que los fondos provienen de actividades lícitas</span>
+            </label>
+            <div class="auth-error" id="amlError"></div>
+            <button class="btn-primary-full" id="amlConfirm">Confirmar y publicar oferta</button>
+            <button class="btn-ghost-dark" id="amlCancel">Volver</button>
+        </div>
+    </div>
+
+    <!-- Modal: documento de identidad verificado -->
+    <div class="fm-modal-overlay" id="docModal" hidden>
+        <div class="fm-modal">
+            <h3>Documento de identidad</h3>
+            <div class="kyc-preview-box"><img id="docModalImg" alt="Documento de identidad verificado"></div>
+            <button class="btn-ghost-dark" id="docModalClose">Cerrar</button>
+        </div>
+    </div>
 
     <script src="app.js"></script>
 </body>

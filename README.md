@@ -65,11 +65,25 @@ Red LAN:  http://192.168.x.x:3000   <- abrir esto en el otro notebook
 
 ## Estructura
 
-- `index.html`, `styles.css`, `script.js` — landing page pública
+- `index.html`, `styles.css`, `script.js` — landing page pública (con simulador que publica ofertas P2P)
 - `login.html` — inicio de sesión
-- `app.html`, `app.js`, `app.css` — dashboard: saldos, transferencias e historial
-- `server.js` — API (login, transferencias, tasas) y servidor de archivos estáticos
-- `data.json` — se genera solo; guarda cuentas, saldos e historial
+- `register.html` — crear cuenta (saldos de bienvenida) + verificación de identidad con QR
+- `kyc.html` — flujo KYC en el celular: tipo de documento, cámara, captura y envío
+- `app.html`, `app.js`, `app.css` — dashboard: saldos, Mercado P2P con escrow, transferencias e historial
+- `server.js` — API (login, registro, KYC, órdenes P2P con AML, transferencias, tasas) y estáticos
+- `data.json` — se genera solo; guarda cuentas, saldos, historial y verificaciones
+
+## Cumplimiento simulado (KYC / AML)
+
+- **Registro**: "Crear cuenta" en la landing abre `register.html`; la cuenta nace con
+  saldos de bienvenida y KYC pendiente. El paso 2 muestra un QR que abre `kyc.html`
+  en el celular para fotografiar el documento; el computador detecta la verificación
+  por polling y entra solo al dashboard.
+- **KYC**: las cuentas seed vienen verificadas de fábrica (simulado); las registradas
+  suben una foto real del documento (cámara o archivo), visible en el perfil.
+- **AML**: publicar una oferta en el Mercado P2P exige la declaración de origen de
+  fondos (modal); queda registrada en la orden y en las transacciones con el sello
+  "AML ✓ Origen declarado".
 
 ## Notas
 

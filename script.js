@@ -118,6 +118,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     navCta.textContent = 'Mi cuenta';
                     navCta.setAttribute('href', 'app.html');
                 }
+                const navRegister = document.querySelector('.nav-cta-register');
+                if (navRegister) navRegister.style.display = 'none';
             }
         })
         .catch(() => { /* servidor no disponible: se comporta como no logueado */ });

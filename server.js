@@ -12,7 +12,10 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const DATA_FILE = path.join(__dirname, 'data.json');
 
-app.use(express.json());
+// Límite amplio: las fotos del documento KYC viajan como dataURL en JSON
+app.use(express.json({ limit: '2mb' }));
+
+const QRCode = require('qrcode');
 
 // ===== Tasas de cambio (base USD), mismas que la landing =====
 const RATES = {
@@ -22,11 +25,15 @@ const RATES = {
 
 // ===== Datos iniciales =====
 function seedData() {
+    // Cuentas del tribunal: verificadas de fábrica (KYC simulado, sin imagen)
+    const kycSeed = () => ({ status: 'verified', docType: 'DNI', verifiedAt: new Date().toISOString(), simulated: true });
+
     const evaluador = (n, password) => ({
         username: `evaluador${n}`,
         password,
         name: ['Adriana Umpierrez', 'Bertha Doumat', 'Dafne Cuevas', 'Diana Canal', 'Juan David Guerra', 'Robin Henao'][n - 1],
-        balances: { USD: 5000, EUR: 2000, CLP: 1000000, MXN: 10000, COP: 500000, PEN: 500, ARS: 100000, VES: 1000 }
+        balances: { USD: 5000, EUR: 2000, CLP: 1000000, MXN: 10000, COP: 500000, PEN: 500, ARS: 100000, VES: 1000 },
+        kyc: kycSeed()
     });
 
     return {
@@ -41,7 +48,8 @@ function seedData() {
                 username: 'demo',
                 password: 'demo123',
                 name: 'Nicolás Sánchez',
-                balances: { USD: 3000, EUR: 1000, CLP: 500000, MXN: 5000, COP: 250000, PEN: 250, ARS: 50000, VES: 500 }
+                balances: { USD: 3000, EUR: 1000, CLP: 500000, MXN: 5000, COP: 250000, PEN: 250, ARS: 50000, VES: 500 },
+                kyc: kycSeed()
             }
         ],
         transactions: [],
@@ -97,7 +105,20 @@ function requireAuth(req, res, next) {
 }
 
 function publicUser(account) {
-    return { username: account.username, name: account.name, balances: account.balances };
+    return {
+        username: account.username,
+        name: account.name,
+        balances: account.balances,
+        kyc: account.kyc
+            ? {
+                status: account.kyc.status || 'pending',
+                docType: account.kyc.docType || null,
+                image: account.kyc.image || null,
+                verifiedAt: account.kyc.verifiedAt || null,
+                simulated: !!account.kyc.simulated
+            }
+            : null
+    };
 }
 
 function convert(amount, fromCurrency, toCurrency) {
@@ -122,6 +143,7 @@ function publicOrder(order) {
         makerReceive: order.makerReceive,  // lo que recibe el creador (wantCurrency, menos 0,75 %)
         taker: order.taker || null,
         takerName: order.takerName || null,
+        fundOrigin: order.fundOrigin || null,
         date: order.date,
         completedAt: order.completedAt || null
     };
@@ -147,6 +169,88 @@ app.post('/api/logout', (req, res) => {
     const token = parseCookies(req)['fm_token'];
     if (token) sessions.delete(token);
     res.setHeader('Set-Cookie', 'fm_token=; HttpOnly; Path=/; Max-Age=0');
+    res.json({ ok: true });
+});
+
+// ===== Registro de cuentas nuevas + verificación de identidad (KYC) =====
+
+// Países soportados y su divisa local (las 8 del proyecto)
+const COUNTRIES = {
+    'México': 'MXN', 'Colombia': 'COP', 'Ecuador': 'USD', 'España': 'EUR',
+    'Perú': 'PEN', 'Argentina': 'ARS', 'Chile': 'CLP', 'Venezuela': 'VES'
+};
+
+// Saldos de bienvenida simulados
+const WELCOME_BALANCE = { USD: 1000, EUR: 1000, MXN: 20000, COP: 4000000, PEN: 4000, ARS: 900000, CLP: 900000, VES: 36500 };
+
+app.post('/api/register', (req, res) => {
+    const { name, email, username, password, country } = req.body || {};
+    const cleanName = String(name || '').trim();
+    const cleanEmail = String(email || '').trim().toLowerCase();
+    const cleanUsername = String(username || '').trim().toLowerCase();
+
+    if (cleanName.length < 3) return res.status(400).json({ error: 'Ingresa tu nombre completo' });
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(cleanEmail)) return res.status(400).json({ error: 'Email no válido' });
+    if (!/^[a-z0-9_]{3,20}$/.test(cleanUsername)) return res.status(400).json({ error: 'El usuario debe tener 3-20 caracteres (letras, números, guion bajo)' });
+    if (String(password || '').length < 6) return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
+    if (!COUNTRIES[country]) return res.status(400).json({ error: 'País no válido' });
+    if (data.accounts.some(a => a.username === cleanUsername)) return res.status(400).json({ error: 'Ese nombre de usuario ya está en uso' });
+    if (data.accounts.some(a => a.email && a.email === cleanEmail)) return res.status(400).json({ error: 'Ese email ya está registrado' });
+
+    const currency = COUNTRIES[country];
+    const balances = { USD: WELCOME_BALANCE.USD, EUR: WELCOME_BALANCE.EUR };
+    balances[currency] = (balances[currency] || 0) + WELCOME_BALANCE[currency];
+
+    const kycToken = crypto.randomBytes(16).toString('hex');
+    const account = {
+        username: cleanUsername,
+        password: String(password),
+        name: cleanName,
+        email: cleanEmail,
+        country,
+        balances,
+        kyc: { status: 'pending' },
+        kycToken
+    };
+    data.accounts.push(account);
+    saveData();
+
+    res.json({ ok: true, kycToken, user: publicUser(account) });
+});
+
+// QR que abre la verificación en el celular (misma instancia del servidor)
+app.get('/api/kyc/:token/qr', async (req, res) => {
+    const account = data.accounts.find(a => a.kycToken === req.params.token);
+    if (!account) return res.status(404).json({ error: 'Verificación no encontrada' });
+
+    const proto = req.headers['x-forwarded-proto'] || req.protocol;
+    const url = `${proto}://${req.get('host')}/kyc.html?t=${req.params.token}`;
+    const svg = await QRCode.toString(url, { type: 'svg', margin: 1, width: 220, color: { dark: '#0D1C2E' } });
+    res.setHeader('Content-Type', 'image/svg+xml');
+    res.send(svg);
+});
+
+// Polling desde el computador: pending -> completed
+app.get('/api/kyc/:token/status', (req, res) => {
+    const account = data.accounts.find(a => a.kycToken === req.params.token);
+    if (!account) return res.status(404).json({ error: 'Verificación no encontrada' });
+    res.json({ status: account.kyc && account.kyc.status === 'verified' ? 'completed' : 'pending' });
+});
+
+// El celular sube la foto del documento
+const KYC_DOC_TYPES = ['dni', 'pasaporte', 'licencia'];
+
+app.post('/api/kyc/:token', (req, res) => {
+    const account = data.accounts.find(a => a.kycToken === req.params.token);
+    if (!account) return res.status(404).json({ error: 'Verificación no encontrada' });
+
+    const { docType, image } = req.body || {};
+    if (!KYC_DOC_TYPES.includes(docType)) return res.status(400).json({ error: 'Tipo de documento no válido' });
+    if (!/^data:image\/(jpeg|png);base64,/.test(String(image || ''))) return res.status(400).json({ error: 'Imagen no válida' });
+    if (image.length > 450000) return res.status(400).json({ error: 'La imagen supera el tamaño máximo (~300 KB)' });
+
+    account.kyc = { status: 'verified', docType, image, verifiedAt: new Date().toISOString() };
+    saveData();
     res.json({ ok: true });
 });
 
@@ -226,14 +330,18 @@ app.get('/api/orders', requireAuth, (req, res) => {
     res.json({ open: open.map(publicOrder), mine: mine.map(publicOrder) });
 });
 
+// AML: orígenes de fondos aceptados en la declaración
+const FUND_ORIGINS = ['salario', 'ahorros', 'negocio', 'remesa', 'venta', 'otro'];
+
 // Publicar oferta: los fondos quedan bloqueados en custodia (escrow)
 app.post('/api/orders', requireAuth, (req, res) => {
-    const { giveCurrency, wantCurrency, amount } = req.body || {};
+    const { giveCurrency, wantCurrency, amount, fundOrigin } = req.body || {};
     const value = Number(amount);
 
     if (!RATES[giveCurrency] || !RATES[wantCurrency]) return res.status(400).json({ error: 'Moneda no válida' });
     if (giveCurrency === wantCurrency) return res.status(400).json({ error: 'Elige dos monedas distintas' });
     if (!isFinite(value) || value <= 0) return res.status(400).json({ error: 'Monto no válido' });
+    if (!FUND_ORIGINS.includes(fundOrigin)) return res.status(400).json({ error: 'Debes declarar el origen de los fondos (AML)' });
 
     const balance = req.user.balances[giveCurrency] || 0;
     if (value > balance) {
@@ -253,6 +361,7 @@ app.post('/api/orders', requireAuth, (req, res) => {
         giveAmount: value,
         giveCurrency,
         wantCurrency,
+        fundOrigin,
         takerPay: +market.toFixed(2),
         takerReceive: +(value * (1 - FEE)).toFixed(2),
         makerReceive: +(market * (1 - FEE)).toFixed(2),
@@ -291,6 +400,7 @@ app.post('/api/orders/:id/accept', requireAuth, (req, res) => {
 
     const base = {
         rate: +(RATES[order.wantCurrency] / RATES[order.giveCurrency]).toFixed(6),
+        fundOrigin: order.fundOrigin || null,
         date: order.completedAt
     };
     data.transactions.push(
