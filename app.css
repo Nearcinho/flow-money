@@ -798,3 +798,87 @@ body {
     .app-sidebar.open { transform: translateX(0); }
     .sidebar-toggle { display: block; }
 }
+
+/* ===== Añadir dinero ===== */
+.dep-methods {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+}
+
+.dep-method {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    padding: 0.9rem;
+    border: 2px solid var(--gray-light);
+    border-radius: var(--radius-md);
+    background: var(--white);
+    font-family: var(--font-primary);
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--navy);
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.dep-method svg { color: var(--turquoise-dark); }
+.dep-method.active { border-color: var(--turquoise); background: var(--turquoise-light); }
+
+.dep-card-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+.dep-bank-box {
+    border: 2px solid var(--gray-light);
+    border-radius: var(--radius-md);
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+}
+
+.dep-bank-box h3 { font-size: 1rem; margin-bottom: 0.75rem; }
+
+.dep-bank-details { display: flex; flex-direction: column; gap: 0.45rem; margin-bottom: 0.75rem; }
+.dep-bank-details div { display: flex; justify-content: space-between; gap: 1rem; font-size: 0.9rem; }
+.dep-bank-details dt { color: #5a6b7c; }
+.dep-bank-details dd { font-weight: 600; font-family: 'Courier New', monospace; }
+
+.dep-reference {
+    background: var(--turquoise-light);
+    border-radius: var(--radius-md);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+}
+
+.dep-ref-label { font-size: 0.8rem; color: #5a6b7c; display: block; margin-bottom: 0.3rem; }
+
+.dep-ref-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.dep-ref-row strong { font-size: 1.1rem; letter-spacing: 0.04em; }
+
+.dep-copy { width: auto; margin-top: 0; padding: 0.45rem 1rem; }
+
+.dep-pending-title { font-size: 1rem; margin: 1.5rem 0 0.75rem; color: #5a6b7c; }
+
+.btn-primary-full .kyc-spinner {
+    display: inline-block;
+    vertical-align: -2px;
+    margin-right: 0.4rem;
+    border-top-color: var(--white);
+    border-color: rgba(255, 255, 255, 0.35);
+    border-top-color: var(--white);
+}
+
+@media (max-width: 500px) {
+    .dep-methods { grid-template-columns: 1fr; }
+    .dep-card-row { grid-template-columns: 1fr; }
+}

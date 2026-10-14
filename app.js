@@ -65,6 +65,7 @@ async function loadSession() {
     document.getElementById('toCurrency').innerHTML = currencyOptions;
     document.getElementById('ordGiveCurrency').innerHTML = currencyOptions;
     document.getElementById('ordWantCurrency').innerHTML = currencyOptions;
+    document.getElementById('depCurrency').innerHTML = currencyOptions;
 
     // Monedas por defecto: primera con saldo para enviar, CLP para recibir
     const firstWithBalance = Object.keys(user.balances).find(c => user.balances[c] > 0) || 'EUR';
@@ -77,6 +78,7 @@ async function loadSession() {
     renderBalances();
     updateConversion();
     updateOrderConversion();
+    updateSavedCardHint();
 }
 
 // Si el usuario viene de la landing con un intercambio pendiente, pre-llenar el formulario de oferta P2P
@@ -396,10 +398,10 @@ async function loadTransactions() {
         return;
     }
 
-    // Notificar transferencias recibidas nuevas
+    // Notificar transferencias recibidas nuevas (los depósitos los anuncia loadDeposits)
     const newest = transactions[0];
     if (!state.firstLoad && state.lastTxId && newest.id !== state.lastTxId) {
-        const incoming = transactions.filter(t => t.type !== 'exchange' && t.to === state.user.username &&
+        const incoming = transactions.filter(t => t.type !== 'exchange' && t.type !== 'deposit' && t.to === state.user.username &&
             (!state.lastTxId || !document.querySelector(`[data-tx="${t.id}"]`)));
         incoming.forEach(t => showToast(t.type === 'p2p'
             ? `Intercambio P2P completado: recibiste ${fmt(t.amountReceived, t.currencyReceived)} de ${t.fromName}`
@@ -411,7 +413,8 @@ async function loadTransactions() {
     list.innerHTML = transactions.map(t => {
         const isExchange = t.type === 'exchange';
         const isP2p = t.type === 'p2p';
-        const isOutgoing = !isExchange && t.from === state.user.username;
+        const isDeposit = t.type === 'deposit';
+        const isOutgoing = !isExchange && !isDeposit && t.from === state.user.username;
         const date = new Date(t.date).toLocaleString('es-CL');
         let title, icon, cssClass;
         if (isExchange) {
@@ -419,6 +422,9 @@ async function loadTransactions() {
         } else if (isP2p) {
             const other = isOutgoing ? t.toName : t.fromName;
             title = `Intercambio P2P con ${other}`; icon = '⇄'; cssClass = 'tx-exchange';
+        } else if (isDeposit) {
+            title = t.method === 'card' ? 'Depósito con tarjeta' : 'Transferencia bancaria recibida';
+            icon = '+'; cssClass = 'tx-in';
         } else {
             title = isOutgoing ? `Enviado a ${t.toName}` : `Recibido de ${t.fromName}`;
             icon = isOutgoing ? '↗' : '↙';
@@ -433,7 +439,7 @@ async function loadTransactions() {
                     ${isP2p ? amlBadge(t.fundOrigin) : ''}
                 </div>
                 <div class="tx-amounts">
-                    <span class="tx-sent">− ${fmt(t.amountSent, t.currencySent)}</span>
+                    ${isDeposit ? '' : `<span class="tx-sent">− ${fmt(t.amountSent, t.currencySent)}</span>`}
                     <span class="tx-received">+ ${fmt(t.amountReceived, t.currencyReceived)}</span>
                 </div>
             </div>
@@ -446,6 +452,171 @@ async function refreshBalances() {
     state.user = user;
     renderBalances();
     renderKycBadge();
+}
+
+// ===== Añadir dinero =====
+const depState = { statuses: {}, firstLoad: true };
+
+// Tarjeta guardada (si existe) como placeholder de ayuda
+function updateSavedCardHint() {
+    const saved = state.user && state.user.savedCard;
+    if (saved) {
+        document.getElementById('depCardNumber').placeholder = `${saved.brand} terminada en •••• ${saved.last4}`;
+    }
+}
+
+// Formato de los campos de tarjeta
+document.getElementById('depCardNumber').addEventListener('input', (e) => {
+    const digits = e.target.value.replace(/\D/g, '').slice(0, 16);
+    e.target.value = digits.replace(/(\d{4})(?=\d)/g, '$1 ');
+});
+
+document.getElementById('depCardExp').addEventListener('input', (e) => {
+    const digits = e.target.value.replace(/\D/g, '').slice(0, 4);
+    e.target.value = digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
+});
+
+document.getElementById('depCardCvv').addEventListener('input', (e) => {
+    e.target.value = e.target.value.replace(/\D/g, '').slice(0, 4);
+});
+
+// Selector de método (tarjeta / transferencia)
+document.querySelectorAll('.dep-method').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.dep-method').forEach(b => b.classList.toggle('active', b === btn));
+        document.getElementById('cardForm').hidden = btn.dataset.method !== 'card';
+        document.getElementById('transferDeposit').hidden = btn.dataset.method !== 'transfer';
+    });
+});
+
+// Pago con tarjeta (simulado: procesando ~2,5 s y luego acredita)
+document.getElementById('cardForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errorBox = document.getElementById('depCardError');
+    const successBox = document.getElementById('depCardSuccess');
+    const btn = document.getElementById('depCardBtn');
+    errorBox.textContent = '';
+    successBox.textContent = '';
+
+    const amount = parseFloat(document.getElementById('depAmount').value);
+    if (!isFinite(amount) || amount <= 0) {
+        errorBox.textContent = 'Ingresa el monto a cargar';
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="kyc-spinner"></span> Conectando con el banco...';
+    await new Promise(r => setTimeout(r, 2500));
+
+    try {
+        const res = await fetch('/api/deposit/card', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                amount,
+                currency: document.getElementById('depCurrency').value,
+                cardNumber: document.getElementById('depCardNumber').value,
+                name: document.getElementById('depCardName').value,
+                exp: document.getElementById('depCardExp').value,
+                cvv: document.getElementById('depCardCvv').value,
+                saveCard: document.getElementById('depSaveCard').checked
+            })
+        });
+        const json = await res.json();
+
+        if (!res.ok) {
+            errorBox.textContent = json.error || 'El pago fue rechazado';
+        } else {
+            state.user.balances = json.balances;
+            if (json.savedCard) { state.user.savedCard = json.savedCard; updateSavedCardHint(); }
+            successBox.textContent = `Pago aprobado: se acreditaron ${fmt(json.deposit.amount, json.deposit.currency)} a tu cuenta`;
+            document.getElementById('depCardNumber').value = '';
+            document.getElementById('depCardExp').value = '';
+            document.getElementById('depCardCvv').value = '';
+            renderBalances();
+            await loadTransactions();
+        }
+    } catch (err) {
+        errorBox.textContent = 'No se pudo conectar con el servidor';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Pagar';
+    }
+});
+
+// Depósito por transferencia: genera referencia y queda pendiente
+document.getElementById('depTransferBtn').addEventListener('click', async () => {
+    const errorBox = document.getElementById('depTransferError');
+    const btn = document.getElementById('depTransferBtn');
+    errorBox.textContent = '';
+
+    const amount = parseFloat(document.getElementById('depAmount').value);
+    if (!isFinite(amount) || amount <= 0) {
+        errorBox.textContent = 'Ingresa el monto a cargar';
+        return;
+    }
+
+    btn.disabled = true;
+    try {
+        const res = await fetch('/api/deposit/transfer', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ amount, currency: document.getElementById('depCurrency').value })
+        });
+        const json = await res.json();
+
+        if (!res.ok) {
+            errorBox.textContent = json.error || 'No se pudo registrar la transferencia';
+        } else {
+            document.getElementById('depReference').textContent = json.deposit.reference;
+            document.getElementById('depReferenceBox').hidden = false;
+            showToast('Transferencia registrada: se acreditará cuando se confirme la recepción');
+            await loadDeposits();
+        }
+    } catch (err) {
+        errorBox.textContent = 'No se pudo conectar con el servidor';
+    } finally {
+        btn.disabled = false;
+    }
+});
+
+document.getElementById('depCopyRef').addEventListener('click', async () => {
+    const ref = document.getElementById('depReference').textContent;
+    try {
+        await navigator.clipboard.writeText(ref);
+        showToast('Referencia copiada');
+    } catch (e) {
+        showToast(`Referencia: ${ref}`);
+    }
+});
+
+// Lista de depósitos pendientes + toast cuando uno se confirma
+async function loadDeposits() {
+    const { deposits } = await api('/api/deposits');
+
+    deposits.forEach(d => {
+        const prev = depState.statuses[d.id];
+        if (prev === 'pending' && d.status === 'completed') {
+            showToast(`Tu transferencia fue recibida: + ${fmt(d.amount, d.currency)}`);
+            refreshBalances();
+            loadTransactions();
+        }
+        depState.statuses[d.id] = d.status;
+    });
+    depState.firstLoad = false;
+
+    const pending = deposits.filter(d => d.status === 'pending');
+    const box = document.getElementById('depPendingBox');
+    box.hidden = !pending.length;
+    document.getElementById('depPending').innerHTML = pending.map(d => `
+        <div class="order-item">
+            <div class="order-details">
+                <strong>${fmt(d.amount, d.currency)} por transferencia</strong>
+                <span class="order-sub">Referencia ${d.reference}</span>
+                <span class="order-badge badge-escrow">Pendiente de confirmación</span>
+            </div>
+        </div>
+    `).join('');
 }
 
 // ===== Cierre de modales (documento KYC y AML): botón, Escape y clic fuera =====
@@ -470,7 +641,7 @@ document.addEventListener('keydown', (e) => {
 // ===== Polling: mantiene ambos notebooks sincronizados =====
 async function poll() {
     try {
-        await Promise.all([refreshBalances(), loadTransactions(), loadOrders()]);
+        await Promise.all([refreshBalances(), loadTransactions(), loadOrders(), loadDeposits()]);
     } catch (e) {
         // errores de red puntuales: se reintenta en el próximo ciclo
     }
@@ -530,7 +701,7 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
 (async () => {
     try {
         await loadSession();
-        await Promise.all([loadTransactions(), loadOrders()]);
+        await Promise.all([loadTransactions(), loadOrders(), loadDeposits()]);
         setInterval(poll, 3000);
     } catch (e) {
         // la redirección a login ya la maneja api()

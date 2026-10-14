@@ -34,6 +34,10 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                     Historial
                 </button>
+                <button class="sidebar-item" data-view="deposit">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="12" y1="9" x2="12" y2="15"></line><line x1="9" y1="12" x2="15" y2="12"></line></svg>
+                    Añadir dinero
+                </button>
             </nav>
         </aside>
 
@@ -173,6 +177,94 @@
                         <p class="tx-empty">Aún no hay movimientos</p>
                     </div>
                 </section>
+
+                <!-- Vista: Añadir dinero -->
+                <section class="panel view-section" data-view="deposit" id="depositPanel" hidden>
+                    <h2>Añadir dinero</h2>
+                    <p class="panel-subtitle">Carga saldo por tarjeta o por transferencia bancaria</p>
+
+                    <div class="form-group">
+                        <label for="depAmount">Monto a cargar</label>
+                        <div class="amount-row">
+                            <input type="number" id="depAmount" min="0.01" step="0.01" placeholder="0.00">
+                            <select id="depCurrency"></select>
+                        </div>
+                        <span class="balance-hint">Mínimo equivalente a 10 EUR · máximo 10.000 EUR</span>
+                    </div>
+
+                    <div class="dep-methods">
+                        <button type="button" class="dep-method active" data-method="card">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+                            Tarjeta
+                        </button>
+                        <button type="button" class="dep-method" data-method="transfer">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"></path><path d="M3 10h18"></path><path d="M5 6l7-3 7 3v4H5z"></path><path d="M6 10v11"></path><path d="M18 10v11"></path><path d="M10 10v11"></path><path d="M14 10v11"></path></svg>
+                            Transferencia bancaria
+                        </button>
+                    </div>
+
+                    <!-- Método: tarjeta -->
+                    <form id="cardForm" class="transfer-form">
+                        <div class="form-group">
+                            <label for="depCardNumber">Número de tarjeta</label>
+                            <input type="text" id="depCardNumber" inputmode="numeric" autocomplete="cc-number" placeholder="4242 4242 4242 4242" maxlength="19">
+                        </div>
+                        <div class="form-group">
+                            <label for="depCardName">Nombre del titular</label>
+                            <input type="text" id="depCardName" autocomplete="cc-name" placeholder="Como aparece en la tarjeta">
+                        </div>
+                        <div class="dep-card-row">
+                            <div class="form-group">
+                                <label for="depCardExp">Expira (MM/AA)</label>
+                                <input type="text" id="depCardExp" inputmode="numeric" autocomplete="cc-exp" placeholder="12/28" maxlength="5">
+                            </div>
+                            <div class="form-group">
+                                <label for="depCardCvv">CVV</label>
+                                <input type="password" id="depCardCvv" inputmode="numeric" autocomplete="cc-csc" placeholder="123" maxlength="4">
+                            </div>
+                        </div>
+                        <label class="aml-check">
+                            <input type="checkbox" id="depSaveCard">
+                            <span>Guardar esta tarjeta para futuras cargas</span>
+                        </label>
+                        <div class="auth-error" id="depCardError"></div>
+                        <div class="transfer-success" id="depCardSuccess"></div>
+                        <button type="submit" class="btn-primary-full" id="depCardBtn">Pagar</button>
+                    </form>
+
+                    <!-- Método: transferencia bancaria -->
+                    <div id="transferDeposit" hidden>
+                        <div class="dep-bank-box">
+                            <h3>Transfiere a la cuenta de Flow Money</h3>
+                            <dl class="dep-bank-details">
+                                <div><dt>Beneficiario</dt><dd id="bankHolder">Flow Money Holding S.L.</dd></div>
+                                <div><dt>Banco</dt><dd id="bankName">Banco Meridian Europe</dd></div>
+                                <div><dt>IBAN</dt><dd id="bankIban">ES91 2100 0418 4502 0005 1332</dd></div>
+                                <div><dt>SWIFT/BIC</dt><dd id="bankSwift">FLOMESM1</dd></div>
+                            </dl>
+                            <p class="balance-hint">Haz la transferencia desde tu banco incluyendo el código de referencia que se genera abajo.</p>
+                        </div>
+
+                        <div id="depReferenceBox" hidden>
+                            <div class="dep-reference">
+                                <span class="dep-ref-label">Tu código de referencia</span>
+                                <div class="dep-ref-row">
+                                    <strong id="depReference"></strong>
+                                    <button type="button" class="btn-ghost-dark dep-copy" id="depCopyRef">Copiar</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="auth-error" id="depTransferError"></div>
+                        <button class="btn-primary-full" id="depTransferBtn">Generar referencia y registrar mi transferencia</button>
+                    </div>
+
+                    <!-- Depósitos en curso -->
+                    <div id="depPendingBox" hidden>
+                        <h3 class="dep-pending-title">Depósitos pendientes</h3>
+                        <div class="order-list" id="depPending"></div>
+                    </div>
+                </section>
             </main>
         </div>
     </div>
@@ -216,6 +308,6 @@
         </div>
     </div>
 
-    <script src="app.js?v=13"></script>
+    <script src="app.js?v=14"></script>
 </body>
 </html>

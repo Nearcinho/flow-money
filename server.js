@@ -53,7 +53,8 @@ function seedData() {
             }
         ],
         transactions: [],
-        orders: []
+        orders: [],
+        deposits: []
     };
 }
 
@@ -66,6 +67,7 @@ let writeQueue = Promise.resolve(); // cola simple: las escrituras no se solapan
 function normalizeData(parsed) {
     if (!Array.isArray(parsed.orders)) parsed.orders = [];
     if (!Array.isArray(parsed.transactions)) parsed.transactions = [];
+    if (!Array.isArray(parsed.deposits)) parsed.deposits = [];
     return parsed;
 }
 
@@ -176,6 +178,7 @@ function publicUser(account) {
         username: account.username,
         name: account.name,
         balances: account.balances,
+        savedCard: account.savedCard || null,
         kyc: account.kyc
             ? {
                 status: account.kyc.status || 'pending',
@@ -515,6 +518,166 @@ app.post('/api/orders/:id/cancel', requireAuth, (req, res) => {
     res.json({ ok: true, order: publicOrder(order), balances: req.user.balances });
 });
 
+// ===== Añadir dinero: depósitos por tarjeta y transferencia bancaria =====
+
+// Límites por depósito, expresados como equivalente en EUR
+const DEPOSIT_MIN_EUR = 10;
+const DEPOSIT_MAX_EUR = 10000;
+
+// Datos bancarios simulados de la plataforma
+const BANK_DETAILS = {
+    holder: 'Flow Money Holding S.L.',
+    bank: 'Banco Meridian Europe',
+    iban: 'ES91 2100 0418 4502 0005 1332',
+    swift: 'FLOMESM1'
+};
+
+function depositLimitError(currency, value) {
+    if (!RATES[currency]) return 'Moneda no válida';
+    if (!isFinite(value) || value <= 0) return 'Monto no válido';
+    const eurEquivalent = value * (RATES.EUR / RATES[currency]);
+    if (eurEquivalent < DEPOSIT_MIN_EUR) return `El monto mínimo equivale a ${DEPOSIT_MIN_EUR} EUR`;
+    if (eurEquivalent > DEPOSIT_MAX_EUR) return `El monto máximo equivale a ${DEPOSIT_MAX_EUR} EUR`;
+    return null;
+}
+
+// Validación Luhn del número de tarjeta
+function luhnValid(cardNumber) {
+    const digits = String(cardNumber || '').replace(/\D/g, '');
+    if (digits.length < 13 || digits.length > 19) return false;
+    let sum = 0;
+    let alternate = false;
+    for (let i = digits.length - 1; i >= 0; i--) {
+        let d = Number(digits[i]);
+        if (alternate) {
+            d *= 2;
+            if (d > 9) d -= 9;
+        }
+        sum += d;
+        alternate = !alternate;
+    }
+    return sum % 10 === 0;
+}
+
+function cardBrand(digits) {
+    if (digits.startsWith('4')) return 'Visa';
+    if (/^5[1-5]/.test(digits)) return 'Mastercard';
+    if (/^3[47]/.test(digits)) return 'American Express';
+    return 'Tarjeta';
+}
+
+function recordDepositTx(account, deposit) {
+    data.transactions.push({
+        id: crypto.randomBytes(8).toString('hex'),
+        type: 'deposit',
+        from: 'flowmoney',
+        fromName: 'Flow Money',
+        to: account.username,
+        toName: account.name,
+        amountSent: deposit.amount,
+        currencySent: deposit.currency,
+        amountReceived: deposit.amount,
+        currencyReceived: deposit.currency,
+        method: deposit.method,
+        reference: deposit.reference || null,
+        date: new Date().toISOString()
+    });
+}
+
+// Acreditar tarjeta: inmediato
+app.post('/api/deposit/card', requireAuth, (req, res) => {
+    const { amount, currency, cardNumber, name, exp, cvv, saveCard } = req.body || {};
+    const value = Number(amount);
+
+    const limitError = depositLimitError(currency, value);
+    if (limitError) return res.status(400).json({ error: limitError });
+
+    const digits = String(cardNumber || '').replace(/\D/g, '');
+    if (!luhnValid(digits)) return res.status(400).json({ error: 'La tarjeta no es válida. Revisa el número.' });
+    if (!String(name || '').trim()) return res.status(400).json({ error: 'Ingresa el nombre del titular' });
+    if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(String(exp || ''))) return res.status(400).json({ error: 'Fecha de expiración no válida (MM/AA)' });
+    if (!/^\d{3,4}$/.test(String(cvv || ''))) return res.status(400).json({ error: 'CVV no válido' });
+
+    req.user.balances[currency] = +(((req.user.balances[currency] || 0) + value)).toFixed(2);
+
+    if (saveCard) {
+        req.user.savedCard = { brand: cardBrand(digits), last4: digits.slice(-4) };
+    }
+
+    const deposit = {
+        id: crypto.randomBytes(8).toString('hex'),
+        username: req.user.username,
+        method: 'card',
+        amount: value,
+        currency,
+        status: 'completed',
+        createdAt: new Date().toISOString()
+    };
+    data.deposits.push(deposit);
+    recordDepositTx(req.user, deposit);
+    saveData();
+
+    res.json({ ok: true, deposit, balances: req.user.balances, savedCard: req.user.savedCard || null });
+});
+
+// Acreditar transferencia: queda pendiente y se confirma sola a los ~25 s
+const DEPOSIT_CONFIRM_MS = 25000;
+
+function confirmDeposit(deposit) {
+    if (deposit.status !== 'pending') return;
+    const account = data.accounts.find(a => a.username === deposit.username);
+    if (!account) {
+        deposit.status = 'failed';
+        saveData();
+        return;
+    }
+    deposit.status = 'completed';
+    deposit.completedAt = new Date().toISOString();
+    account.balances[deposit.currency] = +(((account.balances[deposit.currency] || 0) + deposit.amount)).toFixed(2);
+    recordDepositTx(account, deposit);
+    saveData();
+}
+
+function scheduleDeposit(deposit) {
+    const elapsed = Date.now() - new Date(deposit.createdAt).getTime();
+    const remaining = Math.max(0, DEPOSIT_CONFIRM_MS - elapsed);
+    setTimeout(() => confirmDeposit(deposit), remaining);
+}
+
+app.post('/api/deposit/transfer', requireAuth, (req, res) => {
+    const { amount, currency } = req.body || {};
+    const value = Number(amount);
+
+    const limitError = depositLimitError(currency, value);
+    if (limitError) return res.status(400).json({ error: limitError });
+
+    const pending = data.deposits.filter(d => d.username === req.user.username && d.status === 'pending');
+    if (pending.length >= 3) return res.status(400).json({ error: 'Ya tienes 3 depósitos pendientes. Espera a que se confirmen.' });
+
+    const deposit = {
+        id: crypto.randomBytes(8).toString('hex'),
+        username: req.user.username,
+        method: 'transfer',
+        amount: value,
+        currency,
+        status: 'pending',
+        reference: `FM-${req.user.username.toUpperCase()}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`,
+        createdAt: new Date().toISOString()
+    };
+    data.deposits.push(deposit);
+    saveData();
+    scheduleDeposit(deposit);
+
+    res.json({ ok: true, deposit, bank: BANK_DETAILS });
+});
+
+app.get('/api/deposits', requireAuth, (req, res) => {
+    const mine = data.deposits
+        .filter(d => d.username === req.user.username)
+        .slice().reverse().slice(0, 10);
+    res.json({ deposits: mine, bank: BANK_DETAILS });
+});
+
 // Reinicia cuentas e historial (útil entre ensayos del tribunal)
 // La sesión es autocontenida y no se ve afectada por el reset
 app.post('/api/reset', requireAuth, (req, res) => {
@@ -537,6 +700,9 @@ app.use(express.static(__dirname, {
 // La persistencia se inicializa antes de abrir el puerto
 initStorage().then(initial => {
     data = initial;
+
+    // Reprograma la confirmación de depósitos pendientes (si el proceso murió antes)
+    data.deposits.filter(d => d.status === 'pending').forEach(scheduleDeposit);
 
     app.listen(PORT, '0.0.0.0', () => {
         const nets = os.networkInterfaces();
