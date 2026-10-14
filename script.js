@@ -130,9 +130,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         receiveAmountInput.value = formatNumber(receiveAmount);
         exchangeRateDisplay.textContent = `1 ${sendCurrency.code} = ${formatNumber(rate)} ${receiveCurrency.code}`;
-
-        // Update P2P offers rates
-        updateOffersRates(rate);
     }
 
     // Format number with commas
@@ -141,17 +138,6 @@ document.addEventListener('DOMContentLoaded', function() {
             return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
         return num.toFixed(2);
-    }
-
-    // Update offers rates based on current exchange
-    function updateOffersRates(baseRate) {
-        const offerRates = document.querySelectorAll('.offer-rate');
-        const variations = [1.002, 1.000, 0.998, 1.003];
-
-        offerRates.forEach((el, index) => {
-            const variedRate = baseRate * variations[index];
-            el.textContent = `${formatNumber(variedRate)} ${receiveCurrency.code}`;
-        });
     }
 
     // Update currency display
@@ -425,41 +411,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // ===== Simulate real-time rate updates =====
-    function simulateRateUpdate() {
-        const variation = (Math.random() - 0.5) * 0.02; // ±1% variation
-        currencies.forEach(currency => {
-            if (currency.code !== 'USD') {
-                currency.rate = currency.rate * (1 + variation);
-            }
-        });
+    // Las tasas del simulador son las fijas del proyecto (las mismas de server.js)
 
-        if (sendAmountInput && sendAmountInput.value) {
-            calculateExchange();
-        }
-    }
-
-    // Update rates every 30 seconds
-    setInterval(simulateRateUpdate, 30000);
-
-    // ===== Click on P2P offers =====
+    // ===== Click on P2P offers (solo resalta la tarjeta) =====
     const offerCards = document.querySelectorAll('.offer-card');
     offerCards.forEach(card => {
         card.addEventListener('click', function() {
-            // Highlight selected offer
             offerCards.forEach(c => c.style.background = 'rgba(255, 255, 255, 0.05)');
             this.style.background = 'rgba(0, 196, 204, 0.2)';
-
-            // Update exchange rate based on offer
-            const offerRate = this.querySelector('.offer-rate').textContent;
-            const rateValue = parseFloat(offerRate.replace(/[^0-9.]/g, ''));
-
-            if (rateValue) {
-                const sendAmount = parseFloat(sendAmountInput.value) || 0;
-                const receiveAmount = sendAmount * rateValue;
-                receiveAmountInput.value = formatNumber(receiveAmount);
-                exchangeRateDisplay.textContent = `1 ${sendCurrency.code} = ${formatNumber(rateValue)} ${receiveCurrency.code}`;
-            }
         });
     });
 
