@@ -188,11 +188,11 @@ body {
 .btn-ghost:hover { border-color: var(--turquoise); background: rgba(0, 196, 204, 0.15); }
 
 .app-main {
-    max-width: 1100px;
+    max-width: 900px;
     margin: 0 auto;
     padding: 2rem 1.25rem 4rem;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     gap: 1.5rem;
 }
 
@@ -728,3 +728,73 @@ body {
 }
 
 .kyc-doc-option svg { flex-shrink: 0; color: var(--turquoise-dark); }
+
+/* ===== Layout con barra lateral ===== */
+.app-layout { display: flex; min-height: 100vh; }
+
+.app-sidebar {
+    width: 230px;
+    flex-shrink: 0;
+    background: var(--navy);
+    padding: 1.25rem 0.9rem;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    z-index: 20;
+}
+
+.sidebar-logo { display: block; padding: 0 0.5rem; }
+.sidebar-logo img { width: 100%; max-width: 150px; display: block; }
+
+.sidebar-nav { display: flex; flex-direction: column; gap: 0.35rem; }
+
+.sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.75rem 0.9rem;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: rgba(255, 255, 255, 0.75);
+    font-family: var(--font-primary);
+    font-size: 0.92rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.sidebar-item svg { flex-shrink: 0; }
+.sidebar-item:hover { background: rgba(0, 196, 204, 0.12); color: var(--white); }
+.sidebar-item.active { background: var(--turquoise); color: var(--navy); }
+
+.app-content { flex: 1; min-width: 0; }
+
+.sidebar-toggle {
+    display: none;
+    background: transparent;
+    border: none;
+    color: var(--white);
+    cursor: pointer;
+    padding: 0.35rem;
+}
+
+/* En móvil: sidebar oculto tras overlay, se abre con el botón hamburguesa */
+@media (max-width: 800px) {
+    .app-sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+        box-shadow: var(--shadow-lg);
+    }
+
+    .app-sidebar.open { transform: translateX(0); }
+    .sidebar-toggle { display: block; }
+}

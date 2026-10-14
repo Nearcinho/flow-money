@@ -7,146 +7,175 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="app.css?v=11">
+    <link rel="stylesheet" href="app.css?v=12">
     <link rel="icon" type="image/png" href="flowmoneylogo.png">
 </head>
 <body class="app-body">
-    <header class="app-header">
-        <div class="app-header-inner">
-            <a href="index.html" class="app-logo">
+    <div class="app-layout">
+        <!-- Barra lateral de navegación -->
+        <aside class="app-sidebar" id="appSidebar">
+            <a href="index.html" class="app-logo sidebar-logo">
                 <img src="flowmoneylogo-white.png" alt="Flow Money">
             </a>
-            <div class="app-user">
-                <div class="app-user-badge">
-                    <span class="app-avatar" id="userAvatar">?</span>
-                    <div class="app-user-info">
-                        <strong id="userName">...</strong>
-                        <span id="userUsername">@...</span>
+            <nav class="sidebar-nav">
+                <button class="sidebar-item active" data-view="home">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                    Inicio
+                </button>
+                <button class="sidebar-item" data-view="p2p">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
+                    Mercado P2P
+                </button>
+                <button class="sidebar-item" data-view="transfer">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                    Enviar dinero
+                </button>
+                <button class="sidebar-item" data-view="history">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    Historial
+                </button>
+            </nav>
+        </aside>
+
+        <div class="app-content">
+            <header class="app-header">
+                <div class="app-header-inner">
+                    <button class="sidebar-toggle" id="sidebarToggle" aria-label="Abrir menú">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                    </button>
+                    <div class="app-user">
+                        <div class="app-user-badge">
+                            <span class="app-avatar" id="userAvatar">?</span>
+                            <div class="app-user-info">
+                                <strong id="userName">...</strong>
+                                <span id="userUsername">@...</span>
+                            </div>
+                            <span class="kyc-badge" id="kycBadge" hidden></span>
+                        </div>
+                        <button class="btn-ghost" id="logoutBtn">Cerrar sesión</button>
                     </div>
-                    <span class="kyc-badge" id="kycBadge" hidden></span>
                 </div>
-                <button class="btn-ghost" id="logoutBtn">Cerrar sesión</button>
-            </div>
+            </header>
+
+            <main class="app-main">
+                <!-- Vista: Inicio (saldos) -->
+                <section class="panel view-section" data-view="home" id="homePanel">
+                    <h2>Mis saldos</h2>
+                    <p class="panel-subtitle">Se actualizan automáticamente cuando recibes dinero</p>
+                    <div class="balances-grid" id="balancesGrid"></div>
+                </section>
+
+                <!-- Vista: Mercado P2P -->
+                <section class="panel view-section" data-view="p2p" id="p2pPanel" hidden>
+                    <h2>Mercado P2P</h2>
+                    <p class="panel-subtitle">Publica una oferta de intercambio o acepta la de otro usuario. Los fondos quedan en custodia (escrow) hasta que ambas partes se emparejan; comisión 0,75 % por usuario</p>
+
+                    <form id="orderForm" class="transfer-form p2p-form">
+                        <div class="transfer-currencies">
+                            <div class="form-group">
+                                <label for="ordAmount">Entregas</label>
+                                <div class="amount-row">
+                                    <input type="number" id="ordAmount" min="0.01" step="0.01" required placeholder="0.00">
+                                    <select id="ordGiveCurrency"></select>
+                                </div>
+                                <span class="balance-hint" id="ordGiveHint"></span>
+                            </div>
+
+                            <div class="transfer-arrow">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    <polyline points="12 5 19 12 12 19"></polyline>
+                                </svg>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="ordWantCurrency">Quieres recibir</label>
+                                <div class="amount-row">
+                                    <input type="text" id="ordReceive" readonly placeholder="0.00">
+                                    <select id="ordWantCurrency"></select>
+                                </div>
+                                <span class="balance-hint" id="ordRateHint"></span>
+                            </div>
+                        </div>
+
+                        <div class="auth-error" id="ordError"></div>
+                        <div class="transfer-success" id="ordSuccess"></div>
+
+                        <button type="submit" class="btn-primary-full" id="ordBtn">Publicar oferta</button>
+                    </form>
+
+                    <div class="p2p-lists">
+                        <div class="p2p-column">
+                            <h3>Ofertas disponibles</h3>
+                            <div class="order-list" id="openOrders">
+                                <p class="tx-empty">No hay ofertas abiertas de otros usuarios</p>
+                            </div>
+                        </div>
+                        <div class="p2p-column">
+                            <h3>Mis operaciones P2P</h3>
+                            <div class="order-list" id="myOrders">
+                                <p class="tx-empty">Aún no has publicado ni aceptado ofertas</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Vista: Enviar dinero -->
+                <section class="panel view-section" data-view="transfer" id="transferPanel" hidden>
+                    <h2>Enviar dinero</h2>
+                    <p class="panel-subtitle">Transfiere a otra cuenta con conversión de moneda incluida</p>
+
+                    <form id="transferForm" class="transfer-form">
+                        <div class="form-group">
+                            <label for="recipient">Destinatario</label>
+                            <select id="recipient" required></select>
+                        </div>
+
+                        <div class="transfer-currencies">
+                            <div class="form-group">
+                                <label for="amount">Envías</label>
+                                <div class="amount-row">
+                                    <input type="number" id="amount" min="0.01" step="0.01" required placeholder="0.00">
+                                    <select id="fromCurrency"></select>
+                                </div>
+                                <span class="balance-hint" id="fromBalanceHint"></span>
+                            </div>
+
+                            <div class="transfer-arrow">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    <polyline points="12 5 19 12 12 19"></polyline>
+                                </svg>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="toCurrency">Recibe</label>
+                                <div class="amount-row">
+                                    <input type="text" id="receivedAmount" readonly placeholder="0.00">
+                                    <select id="toCurrency"></select>
+                                </div>
+                                <span class="balance-hint" id="rateHint"></span>
+                            </div>
+                        </div>
+
+                        <div class="auth-error" id="transferError"></div>
+                        <div class="transfer-success" id="transferSuccess"></div>
+
+                        <button type="submit" class="btn-primary-full" id="transferBtn">Confirmar transferencia</button>
+                    </form>
+                </section>
+
+                <!-- Vista: Historial -->
+                <section class="panel view-section" data-view="history" id="historyPanel" hidden>
+                    <h2>Historial de movimientos</h2>
+                    <p class="panel-subtitle">Transferencias enviadas y recibidas</p>
+                    <div class="tx-list" id="txList">
+                        <p class="tx-empty">Aún no hay movimientos</p>
+                    </div>
+                </section>
+            </main>
         </div>
-    </header>
-
-    <main class="app-main">
-        <!-- Saldos -->
-        <section class="panel">
-            <h2>Mis saldos</h2>
-            <p class="panel-subtitle">Se actualizan automáticamente cuando recibes dinero</p>
-            <div class="balances-grid" id="balancesGrid"></div>
-        </section>
-
-        <!-- Mercado P2P -->
-        <section class="panel panel-wide" id="p2pPanel">
-            <h2>Mercado P2P</h2>
-            <p class="panel-subtitle">Publica una oferta de intercambio o acepta la de otro usuario. Los fondos quedan en custodia (escrow) hasta que ambas partes se emparejan; comisión 0,75 % por usuario</p>
-
-            <form id="orderForm" class="transfer-form p2p-form">
-                <div class="transfer-currencies">
-                    <div class="form-group">
-                        <label for="ordAmount">Entregas</label>
-                        <div class="amount-row">
-                            <input type="number" id="ordAmount" min="0.01" step="0.01" required placeholder="0.00">
-                            <select id="ordGiveCurrency"></select>
-                        </div>
-                        <span class="balance-hint" id="ordGiveHint"></span>
-                    </div>
-
-                    <div class="transfer-arrow">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <line x1="5" y1="12" x2="19" y2="12"></line>
-                            <polyline points="12 5 19 12 12 19"></polyline>
-                        </svg>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="ordWantCurrency">Quieres recibir</label>
-                        <div class="amount-row">
-                            <input type="text" id="ordReceive" readonly placeholder="0.00">
-                            <select id="ordWantCurrency"></select>
-                        </div>
-                        <span class="balance-hint" id="ordRateHint"></span>
-                    </div>
-                </div>
-
-                <div class="auth-error" id="ordError"></div>
-                <div class="transfer-success" id="ordSuccess"></div>
-
-                <button type="submit" class="btn-primary-full" id="ordBtn">Publicar oferta</button>
-            </form>
-
-            <div class="p2p-lists">
-                <div class="p2p-column">
-                    <h3>Ofertas disponibles</h3>
-                    <div class="order-list" id="openOrders">
-                        <p class="tx-empty">No hay ofertas abiertas de otros usuarios</p>
-                    </div>
-                </div>
-                <div class="p2p-column">
-                    <h3>Mis operaciones P2P</h3>
-                    <div class="order-list" id="myOrders">
-                        <p class="tx-empty">Aún no has publicado ni aceptado ofertas</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Transferencia -->
-        <section class="panel">
-            <h2>Enviar dinero</h2>
-            <p class="panel-subtitle">Transfiere a otra cuenta con conversión de moneda incluida</p>
-
-            <form id="transferForm" class="transfer-form">
-                <div class="form-group">
-                    <label for="recipient">Destinatario</label>
-                    <select id="recipient" required></select>
-                </div>
-
-                <div class="transfer-currencies">
-                    <div class="form-group">
-                        <label for="amount">Envías</label>
-                        <div class="amount-row">
-                            <input type="number" id="amount" min="0.01" step="0.01" required placeholder="0.00">
-                            <select id="fromCurrency"></select>
-                        </div>
-                        <span class="balance-hint" id="fromBalanceHint"></span>
-                    </div>
-
-                    <div class="transfer-arrow">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <line x1="5" y1="12" x2="19" y2="12"></line>
-                            <polyline points="12 5 19 12 12 19"></polyline>
-                        </svg>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="toCurrency">Recibe</label>
-                        <div class="amount-row">
-                            <input type="text" id="receivedAmount" readonly placeholder="0.00">
-                            <select id="toCurrency"></select>
-                        </div>
-                        <span class="balance-hint" id="rateHint"></span>
-                    </div>
-                </div>
-
-                <div class="auth-error" id="transferError"></div>
-                <div class="transfer-success" id="transferSuccess"></div>
-
-                <button type="submit" class="btn-primary-full" id="transferBtn">Confirmar transferencia</button>
-            </form>
-        </section>
-
-        <!-- Historial -->
-        <section class="panel">
-            <h2>Historial de movimientos</h2>
-            <p class="panel-subtitle">Transferencias enviadas y recibidas</p>
-            <div class="tx-list" id="txList">
-                <p class="tx-empty">Aún no hay movimientos</p>
-            </div>
-        </section>
-    </main>
+    </div>
 
     <!-- Notificación de dinero recibido -->
     <div class="toast" id="toast"></div>
@@ -187,6 +216,6 @@
         </div>
     </div>
 
-    <script src="app.js?v=11"></script>
+    <script src="app.js?v=12"></script>
 </body>
 </html>

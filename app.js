@@ -86,11 +86,31 @@ function applyPendingExchange() {
         if (state.rates[p.to]) document.getElementById('ordWantCurrency').value = p.to;
         if (p.amount > 0) document.getElementById('ordAmount').value = p.amount;
         updateOrderConversion();
-        document.getElementById('p2pPanel').scrollIntoView({ behavior: 'smooth' });
+        switchView('p2p');
         document.getElementById('ordAmount').focus({ preventScroll: true });
         showToast('Tu intercambio está listo: confirma y publica la oferta en el Mercado P2P');
     } catch (e) { /* dato corrupto: se ignora */ }
 }
+
+// ===== Navegación por vistas (barra lateral) =====
+function switchView(name) {
+    document.querySelectorAll('.view-section').forEach(s => {
+        s.hidden = s.dataset.view !== name;
+    });
+    document.querySelectorAll('.sidebar-item').forEach(b => {
+        b.classList.toggle('active', b.dataset.view === name);
+    });
+    document.getElementById('appSidebar').classList.remove('open');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+document.querySelectorAll('.sidebar-item').forEach(btn => {
+    btn.addEventListener('click', () => switchView(btn.dataset.view));
+});
+
+document.getElementById('sidebarToggle').addEventListener('click', () => {
+    document.getElementById('appSidebar').classList.toggle('open');
+});
 
 function renderBalances() {
     const grid = document.getElementById('balancesGrid');
