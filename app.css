@@ -997,3 +997,17 @@ body {
 
 .kyc-pep { display: flex; gap: 1.5rem; }
 .kyc-pep .aml-check { margin-bottom: 0; }
+
+/* Etiqueta de entorno de demostración en el sidebar */
+.demo-tag {
+    display: inline-block;
+    margin-top: 0.5rem;
+    padding: 0.15rem 0.6rem;
+    border-radius: 999px;
+    border: 1px solid rgba(140, 232, 208, 0.5);
+    color: var(--mint);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}

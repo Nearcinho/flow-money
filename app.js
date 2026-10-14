@@ -877,6 +877,12 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
 
 // ===== Inicio =====
 (async () => {
+    // Mensaje único tras el registro: entorno de demostración con saldo de cortesía
+    if (new URLSearchParams(window.location.search).get('welcome') === '1') {
+        history.replaceState(null, '', 'app.html');
+        setTimeout(() => showToast('Entorno de demostración privado: tu cuenta tiene saldo de cortesía para probar la plataforma'), 600);
+    }
+
     try {
         await loadSession();
         await Promise.all([loadTransactions(), loadOrders(), loadDeposits()]);

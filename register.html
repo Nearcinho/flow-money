@@ -169,7 +169,7 @@
                     body: JSON.stringify(credentials)
                 });
                 if (res.ok) {
-                    setTimeout(() => { window.location.href = 'app.html'; }, 1400);
+                    setTimeout(() => { window.location.href = 'app.html?welcome=1'; }, 1400);
                 } else {
                     document.getElementById('loginError').textContent = 'Cuenta creada. Inicia sesión para continuar.';
                     setTimeout(() => { window.location.href = 'login.html'; }, 1800);
