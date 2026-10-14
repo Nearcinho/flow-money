@@ -1,7 +1,0 @@
-  Persistencia: data.json
-
-  Flow Money - Simulador de intercambio
-  ------------------------------------
-  Local:    http://localhost:3000
-  Red LAN:  http://192.168.1.47:3000  <- abrir esto en el otro notebook
-
