@@ -38,6 +38,10 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="12" y1="9" x2="12" y2="15"></line><line x1="9" y1="12" x2="15" y2="12"></line></svg>
                     Añadir dinero
                 </button>
+                <button class="sidebar-item" data-view="profile">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    Mi perfil
+                </button>
             </nav>
         </aside>
 
@@ -265,6 +269,77 @@
                         <div class="order-list" id="depPending"></div>
                     </div>
                 </section>
+
+                <!-- Vista: Mi perfil -->
+                <section class="panel view-section" data-view="profile" id="profilePanel" hidden>
+                    <h2>Mi perfil</h2>
+                    <p class="panel-subtitle">Datos de tu cuenta, seguridad y verificación</p>
+
+                    <h3 class="profile-subtitle">Datos de la cuenta</h3>
+                    <form id="profileForm" class="transfer-form">
+                        <div class="form-group">
+                            <label for="profName">Nombre completo</label>
+                            <input type="text" id="profName" required>
+                        </div>
+                        <div class="dep-card-row">
+                            <div class="form-group">
+                                <label for="profEmail">Email</label>
+                                <input type="email" id="profEmail" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Usuario</label>
+                                <input type="text" id="profUsername" readonly disabled>
+                            </div>
+                        </div>
+                        <div class="dep-card-row">
+                            <div class="form-group">
+                                <label>País</label>
+                                <input type="text" id="profCountry" readonly disabled>
+                            </div>
+                            <div class="form-group">
+                                <label>Miembro desde</label>
+                                <input type="text" id="profSince" readonly disabled>
+                            </div>
+                        </div>
+                        <div class="auth-error" id="profError"></div>
+                        <div class="transfer-success" id="profSuccess"></div>
+                        <button type="submit" class="btn-primary-full">Guardar cambios</button>
+                    </form>
+
+                    <h3 class="profile-subtitle">Seguridad</h3>
+                    <form id="passwordForm" class="transfer-form">
+                        <div class="form-group">
+                            <label for="profCurrentPass">Contraseña actual</label>
+                            <input type="password" id="profCurrentPass" autocomplete="current-password" required>
+                        </div>
+                        <div class="dep-card-row">
+                            <div class="form-group">
+                                <label for="profNewPass">Nueva contraseña</label>
+                                <input type="password" id="profNewPass" autocomplete="new-password" required minlength="6">
+                            </div>
+                            <div class="form-group">
+                                <label for="profNewPass2">Confirmar nueva contraseña</label>
+                                <input type="password" id="profNewPass2" autocomplete="new-password" required>
+                            </div>
+                        </div>
+                        <div class="auth-error" id="passError"></div>
+                        <button type="submit" class="btn-primary-full" id="passBtn">Cambiar contraseña</button>
+                    </form>
+
+                    <h3 class="profile-subtitle">Verificación de identidad</h3>
+                    <div id="profKyc"></div>
+
+                    <div id="profCardBox" hidden>
+                        <h3 class="profile-subtitle">Tarjeta guardada</h3>
+                        <div class="order-item">
+                            <div class="order-details">
+                                <strong id="profCardLabel"></strong>
+                                <span class="order-sub">Se usa como método rápido para añadir dinero</span>
+                            </div>
+                            <button class="btn-cancel-order" id="profCardDelete">Eliminar</button>
+                        </div>
+                    </div>
+                </section>
             </main>
         </div>
     </div>
@@ -308,6 +383,6 @@
         </div>
     </div>
 
-    <script src="app.js?v=14"></script>
+    <script src="app.js?v=15"></script>
 </body>
 </html>

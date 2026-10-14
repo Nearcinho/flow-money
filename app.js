@@ -52,6 +52,7 @@ async function loadSession() {
     document.getElementById('userUsername').textContent = '@' + user.username;
     document.getElementById('userAvatar').textContent = initials(user.name);
     renderKycBadge();
+    renderProfile();
 
     const recipientSelect = document.getElementById('recipient');
     recipientSelect.innerHTML = users
@@ -208,11 +209,7 @@ function renderKycBadge() {
             + `Identidad verificada${docLabel ? ` (${docLabel})` : ''}`;
         badge.title = kyc.image ? 'Clic para ver el documento' : '';
         // Doble protección: sin imagen el badge no es clickeable y el visor nunca abre
-        badge.onclick = !kyc.image ? null : () => {
-            if (!kyc.image) return;
-            document.getElementById('docModalImg').src = kyc.image;
-            document.getElementById('docModal').hidden = false;
-        };
+        badge.onclick = !kyc.image ? null : () => openDocViewer(kyc.image);
     } else {
         badge.className = 'kyc-badge kyc-pending';
         badge.textContent = 'Verificación pendiente';
@@ -460,9 +457,9 @@ const depState = { statuses: {}, firstLoad: true };
 // Tarjeta guardada (si existe) como placeholder de ayuda
 function updateSavedCardHint() {
     const saved = state.user && state.user.savedCard;
-    if (saved) {
-        document.getElementById('depCardNumber').placeholder = `${saved.brand} terminada en •••• ${saved.last4}`;
-    }
+    document.getElementById('depCardNumber').placeholder = saved
+        ? `${saved.brand} terminada en •••• ${saved.last4}`
+        : '4242 4242 4242 4242';
 }
 
 // Formato de los campos de tarjeta
@@ -619,9 +616,153 @@ async function loadDeposits() {
     `).join('');
 }
 
+// ===== Mi perfil =====
+function renderProfile() {
+    const u = state.user;
+    if (!u) return;
+
+    document.getElementById('profName').value = u.name || '';
+    document.getElementById('profEmail').value = u.email || '';
+    document.getElementById('profUsername').value = '@' + u.username;
+    document.getElementById('profCountry').value = u.country || '—';
+    document.getElementById('profSince').value = u.createdAt
+        ? new Date(u.createdAt).toLocaleDateString('es-CL', { year: 'numeric', month: 'long', day: 'numeric' })
+        : '—';
+
+    // KYC
+    const kyc = u.kyc;
+    const box = document.getElementById('profKyc');
+    if (!kyc) {
+        box.innerHTML = '<p class="tx-empty">Sin información de verificación</p>';
+    } else if (kyc.simulated) {
+        box.innerHTML = '<p class="profile-kyc-note"><span class="order-badge badge-done">Cuenta de demostración verificada</span></p>';
+    } else if (kyc.status === 'verified') {
+        const docLabel = DOC_LABELS[kyc.docType] || kyc.docType || '';
+        const date = kyc.verifiedAt ? new Date(kyc.verifiedAt).toLocaleString('es-CL') : '';
+        const shots = [
+            ['Frente', kyc.front], ['Reverso', kyc.back], ['Selfie', kyc.selfie]
+        ].filter(([, src]) => src);
+        box.innerHTML = `
+            <p class="profile-kyc-note">
+                <span class="order-badge badge-done">Identidad verificada</span>
+                <span class="order-sub">${docLabel}${date ? ' · ' + date : ''}</span>
+            </p>
+            <div class="profile-kyc-shots">
+                ${shots.map(([label, src], i) => `
+                    <button type="button" class="profile-kyc-shot" data-shot="${i}">
+                        <img src="${src}" alt="${label} del documento">
+                        <span>${label}</span>
+                    </button>
+                `).join('')}
+            </div>
+        `;
+        box.querySelectorAll('.profile-kyc-shot').forEach(btn => {
+            btn.addEventListener('click', () => openDocViewer(shots[Number(btn.dataset.shot)][1]));
+        });
+    } else {
+        box.innerHTML = '<p class="profile-kyc-note"><span class="order-badge badge-escrow">Verificación pendiente</span></p>';
+    }
+
+    // Tarjeta guardada
+    const cardBox = document.getElementById('profCardBox');
+    cardBox.hidden = !u.savedCard;
+    if (u.savedCard) {
+        document.getElementById('profCardLabel').textContent = `${u.savedCard.brand} •••• ${u.savedCard.last4}`;
+    }
+}
+
+document.getElementById('profileForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errorBox = document.getElementById('profError');
+    const successBox = document.getElementById('profSuccess');
+    errorBox.textContent = '';
+    successBox.textContent = '';
+
+    try {
+        const res = await fetch('/api/profile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: document.getElementById('profName').value,
+                email: document.getElementById('profEmail').value
+            })
+        });
+        const json = await res.json();
+
+        if (!res.ok) {
+            errorBox.textContent = json.error || 'No se pudo guardar';
+        } else {
+            state.user = json.user;
+            document.getElementById('userName').textContent = json.user.name;
+            document.getElementById('userAvatar').textContent = initials(json.user.name);
+            successBox.textContent = 'Datos actualizados';
+        }
+    } catch (err) {
+        errorBox.textContent = 'No se pudo conectar con el servidor';
+    }
+});
+
+document.getElementById('passwordForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errorBox = document.getElementById('passError');
+    const btn = document.getElementById('passBtn');
+    errorBox.textContent = '';
+
+    const newPassword = document.getElementById('profNewPass').value;
+    if (newPassword !== document.getElementById('profNewPass2').value) {
+        errorBox.textContent = 'Las contraseñas nuevas no coinciden';
+        return;
+    }
+
+    btn.disabled = true;
+    try {
+        const res = await fetch('/api/profile/password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                current: document.getElementById('profCurrentPass').value,
+                newPassword
+            })
+        });
+        const json = await res.json();
+
+        if (!res.ok) {
+            errorBox.textContent = json.error || 'No se pudo cambiar la contraseña';
+        } else {
+            showToast('Contraseña actualizada correctamente');
+            document.getElementById('passwordForm').reset();
+        }
+    } catch (err) {
+        errorBox.textContent = 'No se pudo conectar con el servidor';
+    } finally {
+        btn.disabled = false;
+    }
+});
+
+document.getElementById('profCardDelete').addEventListener('click', async () => {
+    try {
+        const res = await fetch('/api/profile/card', { method: 'DELETE' });
+        if (res.ok) {
+            state.user.savedCard = null;
+            renderProfile();
+            updateSavedCardHint();
+            showToast('Tarjeta eliminada');
+        }
+    } catch (err) {
+        showToast('No se pudo conectar con el servidor');
+    }
+});
+
 // ===== Cierre de modales (documento KYC y AML): botón, Escape y clic fuera =====
 function closeModal(id) {
     document.getElementById(id).hidden = true;
+}
+
+// Visor de imagen reutilizable (KYC en header y perfil)
+function openDocViewer(src) {
+    if (!src) return;
+    document.getElementById('docModalImg').src = src;
+    document.getElementById('docModal').hidden = false;
 }
 
 document.getElementById('docModalClose').addEventListener('click', () => closeModal('docModal'));

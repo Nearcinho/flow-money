@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 3000;
 const DATA_FILE = path.join(__dirname, 'data.json');
 
 // Límite amplio: las fotos del documento KYC viajan como dataURL en JSON
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '4mb' }));
 
 const QRCode = require('qrcode');
 
@@ -32,6 +32,9 @@ function seedData() {
         username: `evaluador${n}`,
         password,
         name: ['Adriana Umpierrez', 'Bertha Doumat', 'Dafne Cuevas', 'Diana Canal', 'Juan David Guerra', 'Robin Henao'][n - 1],
+        email: `evaluador${n}@flowmoney.demo`,
+        country: 'Chile',
+        createdAt: '2026-01-15T12:00:00.000Z',
         balances: { EUR: 100, MXN: 1875, COP: 430000, CLP: 96000, PEN: 400, ARS: 95000, VES: 4000 },
         kyc: kycSeed()
     });
@@ -48,6 +51,9 @@ function seedData() {
                 username: 'demo',
                 password: 'demo123',
                 name: 'Nicolás Sánchez',
+                email: 'demo@flowmoney.demo',
+                country: 'Chile',
+                createdAt: '2026-01-15T12:00:00.000Z',
                 balances: { EUR: 100, MXN: 1875, COP: 430000, CLP: 96000, PEN: 400, ARS: 95000, VES: 4000 },
                 kyc: kycSeed()
             }
@@ -177,13 +183,19 @@ function publicUser(account) {
     return {
         username: account.username,
         name: account.name,
+        email: account.email || null,
+        country: account.country || null,
+        createdAt: account.createdAt || null,
         balances: account.balances,
         savedCard: account.savedCard || null,
         kyc: account.kyc
             ? {
                 status: account.kyc.status || 'pending',
                 docType: account.kyc.docType || null,
-                image: account.kyc.image || null,
+                image: account.kyc.front || account.kyc.image || null,
+                front: account.kyc.front || account.kyc.image || null,
+                back: account.kyc.back || null,
+                selfie: account.kyc.selfie || null,
                 verifiedAt: account.kyc.verifiedAt || null,
                 simulated: !!account.kyc.simulated
             }
@@ -273,6 +285,7 @@ app.post('/api/register', (req, res) => {
     const account = {
         username: cleanUsername,
         password: String(password),
+        createdAt: new Date().toISOString(),
         name: cleanName,
         email: cleanEmail,
         country,
@@ -305,25 +318,88 @@ app.get('/api/kyc/:token/status', (req, res) => {
     res.json({ status: account.kyc && account.kyc.status === 'verified' ? 'completed' : 'pending' });
 });
 
-// El celular sube la foto del documento
+// El celular sube las fotos de la verificación (frente, reverso y selfie)
 const KYC_DOC_TYPES = ['dni', 'pasaporte', 'licencia'];
+const KYC_IMAGE_MAX = 400000; // ~300 KB por imagen en base64
+
+function validKycImage(img) {
+    return typeof img === 'string'
+        && /^data:image\/(jpeg|png);base64,/.test(img)
+        && img.length <= KYC_IMAGE_MAX;
+}
 
 app.post('/api/kyc/:token', (req, res) => {
     const account = data.accounts.find(a => a.kycToken === req.params.token);
     if (!account) return res.status(404).json({ error: 'Verificación no encontrada' });
 
-    const { docType, image } = req.body || {};
+    const { docType, front, back, selfie, image } = req.body || {};
     if (!KYC_DOC_TYPES.includes(docType)) return res.status(400).json({ error: 'Tipo de documento no válido' });
-    if (!/^data:image\/(jpeg|png);base64,/.test(String(image || ''))) return res.status(400).json({ error: 'Imagen no válida' });
-    if (image.length > 450000) return res.status(400).json({ error: 'La imagen supera el tamaño máximo (~300 KB)' });
 
-    account.kyc = { status: 'verified', docType, image, verifiedAt: new Date().toISOString() };
+    // Compatibilidad: el flujo antiguo enviaba una sola foto en 'image'
+    const frontImg = front || image;
+    if (!validKycImage(frontImg)) return res.status(400).json({ error: 'La foto del frente no es válida o supera ~300 KB' });
+    if (!validKycImage(back)) return res.status(400).json({ error: 'La foto del reverso no es válida o supera ~300 KB' });
+    if (!validKycImage(selfie)) return res.status(400).json({ error: 'La selfie no es válida o supera ~300 KB' });
+
+    account.kyc = {
+        status: 'verified',
+        docType,
+        front: frontImg,
+        back,
+        selfie,
+        image: frontImg, // alias para compatibilidad
+        verifiedAt: new Date().toISOString()
+    };
     saveData();
     res.json({ ok: true });
 });
 
 app.get('/api/me', requireAuth, (req, res) => {
     res.json({ user: publicUser(req.user) });
+});
+
+// ===== Mi perfil =====
+
+// Editar nombre y email (email único)
+app.post('/api/profile', requireAuth, (req, res) => {
+    const { name, email } = req.body || {};
+    const cleanName = String(name || '').trim();
+    const cleanEmail = String(email || '').trim().toLowerCase();
+
+    if (cleanName.length < 3) return res.status(400).json({ error: 'Ingresa tu nombre completo' });
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(cleanEmail)) return res.status(400).json({ error: 'Email no válido' });
+    if (data.accounts.some(a => a.email === cleanEmail && a.username !== req.user.username)) {
+        return res.status(400).json({ error: 'Ese email ya está registrado en otra cuenta' });
+    }
+
+    req.user.name = cleanName;
+    req.user.email = cleanEmail;
+    saveData();
+    res.json({ ok: true, user: publicUser(req.user) });
+});
+
+// Cambiar contraseña (la sesión es autocontenida por username: sigue activa)
+app.post('/api/profile/password', requireAuth, (req, res) => {
+    const { current, newPassword } = req.body || {};
+
+    if (req.user.password !== String(current || '')) {
+        return res.status(400).json({ error: 'La contraseña actual no es correcta' });
+    }
+    if (String(newPassword || '').length < 6) {
+        return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 6 caracteres' });
+    }
+
+    req.user.password = String(newPassword);
+    saveData();
+    res.json({ ok: true });
+});
+
+// Eliminar tarjeta guardada
+app.delete('/api/profile/card', requireAuth, (req, res) => {
+    if (!req.user.savedCard) return res.status(404).json({ error: 'No hay tarjeta guardada' });
+    delete req.user.savedCard;
+    saveData();
+    res.json({ ok: true });
 });
 
 app.get('/api/users', requireAuth, (req, res) => {

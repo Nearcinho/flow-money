@@ -882,3 +882,95 @@ body {
     .dep-methods { grid-template-columns: 1fr; }
     .dep-card-row { grid-template-columns: 1fr; }
 }
+
+/* ===== Mi perfil ===== */
+.profile-subtitle {
+    font-size: 1rem;
+    color: #5a6b7c;
+    margin: 1.75rem 0 0.9rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--gray-light);
+}
+
+.panel h2 + .panel-subtitle + .profile-subtitle { margin-top: 0; padding-top: 0; border-top: none; }
+
+.profile-kyc-note {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.profile-kyc-shots {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 0.9rem;
+    flex-wrap: wrap;
+}
+
+.profile-kyc-shot {
+    border: 2px solid var(--gray-light);
+    border-radius: var(--radius-sm);
+    background: var(--white);
+    padding: 0.4rem;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    font-family: var(--font-primary);
+    font-size: 0.78rem;
+    color: #5a6b7c;
+    transition: border-color 0.2s ease, transform 0.15s ease;
+}
+
+.profile-kyc-shot:hover { border-color: var(--turquoise); transform: translateY(-2px); }
+
+.profile-kyc-shot img {
+    width: 110px;
+    height: 75px;
+    object-fit: cover;
+    border-radius: 4px;
+    display: block;
+}
+
+/* ===== KYC en 3 pasos ===== */
+.kyc-progress {
+    text-align: center;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--turquoise-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.5rem;
+}
+
+.kyc-frame.oval {
+    inset: 10% 22%;
+    border-radius: 50%;
+}
+
+.kyc-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.6rem;
+    margin-bottom: 1.25rem;
+}
+
+.kyc-summary-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.78rem;
+    color: #5a6b7c;
+}
+
+.kyc-summary-item img {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+    border: 2px solid var(--gray-light);
+    display: block;
+}
