@@ -57,24 +57,69 @@ function seedData() {
     };
 }
 
-function loadData() {
+// ===== Persistencia: PostgreSQL si hay DATABASE_URL (Render), si no data.json =====
+// El objeto data completo (accounts, transactions, orders) vive en una fila JSONB,
+// así la lógica de negocio no cambia entre ambos backends.
+let db = null;                 // cliente pg, solo si hay DATABASE_URL
+let writeQueue = Promise.resolve(); // cola simple: las escrituras no se solapan
+
+function normalizeData(parsed) {
+    if (!Array.isArray(parsed.orders)) parsed.orders = [];
+    if (!Array.isArray(parsed.transactions)) parsed.transactions = [];
+    return parsed;
+}
+
+function loadFileData() {
     try {
-        const parsed = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
-        if (!Array.isArray(parsed.orders)) parsed.orders = [];
-        if (!Array.isArray(parsed.transactions)) parsed.transactions = [];
-        return parsed;
+        return normalizeData(JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')));
     } catch (e) {
-        const data = seedData();
-        fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-        return data;
+        const fresh = seedData();
+        fs.writeFileSync(DATA_FILE, JSON.stringify(fresh, null, 2));
+        return fresh;
     }
 }
 
+async function initStorage() {
+    if (process.env.DATABASE_URL) {
+        // pg se requiere solo cuando se usa: el arranque local no depende de él
+        const { Client } = require('pg');
+        db = new Client({
+            connectionString: process.env.DATABASE_URL,
+            ssl: { rejectUnauthorized: false }
+        });
+        await db.connect();
+        await db.query('CREATE TABLE IF NOT EXISTS kv (id TEXT PRIMARY KEY, data JSONB)');
+
+        const res = await db.query('SELECT data FROM kv WHERE id = $1', ['main']);
+        if (res.rows.length) {
+            console.log('  Persistencia: PostgreSQL');
+            return normalizeData(res.rows[0].data);
+        }
+        const fresh = seedData();
+        await db.query('INSERT INTO kv (id, data) VALUES ($1, $2)', ['main', fresh]);
+        console.log('  Persistencia: PostgreSQL (semilla inicial creada)');
+        return fresh;
+    }
+
+    console.log('  Persistencia: data.json');
+    return loadFileData();
+}
+
 function saveData() {
+    if (db) {
+        // Fire-and-forget encolado: los endpoints no esperan al disco
+        writeQueue = writeQueue.then(() =>
+            db.query(
+                'INSERT INTO kv (id, data) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data',
+                ['main', data]
+            )
+        ).catch(err => console.error('  Error guardando en PostgreSQL:', err.message));
+        return;
+    }
     fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
 }
 
-let data = loadData();
+let data; // se inicializa en initStorage() antes de abrir el puerto
 
 // ===== Sesiones autocontenidas (30 dias): cookie firmada con HMAC, sin estado =====
 // El token lleva username + expiracion + firma; no depende de data.json, asi que
@@ -489,19 +534,27 @@ app.use(express.static(__dirname, {
     }
 }));
 
-app.listen(PORT, '0.0.0.0', () => {
-    const nets = os.networkInterfaces();
-    const lanIps = [];
-    Object.values(nets).forEach(list => {
-        (list || []).forEach(net => {
-            if (net.family === 'IPv4' && !net.internal) lanIps.push(net.address);
-        });
-    });
+// La persistencia se inicializa antes de abrir el puerto
+initStorage().then(initial => {
+    data = initial;
 
-    console.log('');
-    console.log('  Flow Money - Simulador de intercambio');
-    console.log('  ------------------------------------');
-    console.log(`  Local:    http://localhost:${PORT}`);
-    lanIps.forEach(ip => console.log(`  Red LAN:  http://${ip}:${PORT}  <- abrir esto en el otro notebook`));
-    console.log('');
+    app.listen(PORT, '0.0.0.0', () => {
+        const nets = os.networkInterfaces();
+        const lanIps = [];
+        Object.values(nets).forEach(list => {
+            (list || []).forEach(net => {
+                if (net.family === 'IPv4' && !net.internal) lanIps.push(net.address);
+            });
+        });
+
+        console.log('');
+        console.log('  Flow Money - Simulador de intercambio');
+        console.log('  ------------------------------------');
+        console.log(`  Local:    http://localhost:${PORT}`);
+        lanIps.forEach(ip => console.log(`  Red LAN:  http://${ip}:${PORT}  <- abrir esto en el otro notebook`));
+        console.log('');
+    });
+}).catch(err => {
+    console.error('  No se pudo iniciar la persistencia:', err.message);
+    process.exit(1);
 });
