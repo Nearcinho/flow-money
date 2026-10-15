@@ -17,9 +17,9 @@ app.use(express.json({ limit: '4mb' }));
 
 const QRCode = require('qrcode');
 
-// ===== Tasas de cambio relativas entre las 7 divisas, mismas que la landing =====
+// ===== Tasas de cambio relativas entre las 8 divisas, mismas que la landing =====
 const RATES = {
-    EUR: 0.92, MXN: 17.25, ARS: 875.50,
+    USD: 1, EUR: 0.92, MXN: 17.25, ARS: 875.50,
     COP: 3950.00, CLP: 885.00, PEN: 3.72, VES: 36.50
 };
 
@@ -53,7 +53,7 @@ function seedData() {
         email: `evaluador${n}@flowmoney.demo`,
         country: 'Chile',
         createdAt: '2026-01-15T12:00:00.000Z',
-        balances: { EUR: 100, MXN: 1875, COP: 430000, CLP: 96000, PEN: 400, ARS: 95000, VES: 4000 },
+        balances: { USD: 109, EUR: 100, MXN: 1875, COP: 430000, CLP: 96000, PEN: 400, ARS: 95000, VES: 4000 },
         kyc: kycSeed(personales[n - 1])
     });
 
@@ -72,7 +72,7 @@ function seedData() {
                 email: 'demo@flowmoney.demo',
                 country: 'Chile',
                 createdAt: '2026-01-15T12:00:00.000Z',
-                balances: { EUR: 100, MXN: 1875, COP: 430000, CLP: 96000, PEN: 400, ARS: 95000, VES: 4000 },
+                balances: { USD: 109, EUR: 100, MXN: 1875, COP: 430000, CLP: 96000, PEN: 400, ARS: 95000, VES: 4000 },
                 kyc: kycSeed(personales[6])
             }
         ],
@@ -255,12 +255,12 @@ app.post('/api/logout', (req, res) => {
 
 // Países soportados y su divisa local (las 8 del proyecto)
 const COUNTRIES = {
-    'México': 'MXN', 'Colombia': 'COP', 'Ecuador': 'EUR', 'España': 'EUR',
+    'México': 'MXN', 'Colombia': 'COP', 'Ecuador': 'USD', 'España': 'EUR',
     'Perú': 'PEN', 'Argentina': 'ARS', 'Chile': 'CLP', 'Venezuela': 'VES'
 };
 
 // Saldos de bienvenida simulados (~100 EUR equivalentes por divisa)
-const WELCOME_BALANCE = { EUR: 100, MXN: 1875, COP: 430000, CLP: 96000, PEN: 400, ARS: 95000, VES: 4000 };
+const WELCOME_BALANCE = { USD: 109, EUR: 100, MXN: 1875, COP: 430000, CLP: 96000, PEN: 400, ARS: 95000, VES: 4000 };
 
 app.post('/api/register', (req, res) => {
     const { name, email, username, password, country } = req.body || {};

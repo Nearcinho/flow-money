@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // ===== Currencies Data =====
     const currencies = [
+        { code: 'USD', name: 'Dólar estadounidense', rate: 1 },
         { code: 'EUR', name: 'Euro', rate: 0.92 },
         { code: 'MXN', name: 'Peso mexicano', rate: 17.25 },
         { code: 'ARS', name: 'Peso argentino', rate: 875.50 },
